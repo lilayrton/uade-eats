@@ -152,7 +152,7 @@ export default function CartPage() {
             </main>
 
             {/* ── Fixed bottom: subtotal + CTA ──────────────────────────── */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 max-w-[480px] mx-auto bg-card border-t border-border/60 px-4 pt-4 pb-2">
+            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50 bg-card border-t border-border/60 px-4 pt-4 pb-2">
               {/* Subtotal rows */}
               <div className="space-y-2 mb-3">
                 <div className="flex items-center justify-between text-sm">
