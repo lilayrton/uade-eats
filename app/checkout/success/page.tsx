@@ -47,23 +47,23 @@ function SuccessContent() {
     confirmOrder()
   }, [orderId])
 
-  // Countdown timer for automatic redirect
+  // Countdown timer for automatic decrement
   useEffect(() => {
-    if (loading || error) return
+    if (loading || error || countdown === 0) return
 
     const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          router.replace("/orders")
-          return 0
-        }
-        return prev - 1
-      })
+      setCountdown((prev) => prev - 1)
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [loading, error, router])
+  }, [loading, error, countdown])
+
+  // Automatic redirect trigger when countdown reaches 0
+  useEffect(() => {
+    if (countdown === 0) {
+      router.replace("/orders")
+    }
+  }, [countdown, router])
 
   if (loading) {
     return (
