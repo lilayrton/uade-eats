@@ -118,16 +118,6 @@ export default function CheckoutPage() {
     }
   }, [mounted, cart.items.length, router])
 
-  if (!mounted) {
-    return (
-      <div className="min-h-svh flex items-center justify-center bg-[#F9F5F0]">
-        <Loader2 className="animate-spin" style={{ color: "#F97316" }} size={32} />
-      </div>
-    )
-  }
-
-  if (cart.items.length === 0) return null
-
   const total = cart.items.reduce((sum, item) => sum + item.quantity * item.product.price, 0)
 
   const orderItems = cart.items.map((ci) => ({
@@ -178,6 +168,16 @@ export default function CheckoutPage() {
       setIsProcessing(false)
     }
   }, [isProcessing, router, storeName, cart, selectedPayment, dispatch])
+
+  if (!mounted) {
+    return (
+      <div className="min-h-svh flex items-center justify-center bg-[#F9F5F0]">
+        <Loader2 className="animate-spin" style={{ color: "#F97316" }} size={32} />
+      </div>
+    )
+  }
+
+  if (cart.items.length === 0) return null
 
   const stepTitle = step === 1 ? "Resumen del pedido" : "Método de pago"
 
