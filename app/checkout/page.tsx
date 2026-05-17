@@ -208,7 +208,7 @@ export default function CheckoutPage() {
         {/* ── Main content (keyed so React re-mounts on step change → triggers animation) ── */}
         <main
           key={step}
-          className="flex-1 pb-[220px] animate-in fade-in slide-in-from-right-4 duration-200"
+          className="flex-1 pb-24 animate-in fade-in slide-in-from-right-4 duration-200"
         >
           {step === 1 ? (
             <Step1Content
@@ -225,10 +225,9 @@ export default function CheckoutPage() {
           )}
         </main>
 
-        {/* ── Fixed footer CTA ── */}
+        {/* ── Sticky footer CTA ── */}
         <div 
-          className="fixed bottom-0 w-full max-w-[480px] z-50 bg-white border-t border-[#F3F4F6] px-4 pt-4 pb-6 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
-          style={{ left: "50%", transform: "translateX(-50%)" }}
+          className="sticky bottom-0 w-full z-50 bg-white border-t border-[#F3F4F6] px-4 pt-4 pb-6 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
         >
           {step === 1 ? (
             <button
