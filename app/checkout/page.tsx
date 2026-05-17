@@ -102,16 +102,29 @@ export default function CheckoutPage() {
   const [step, setStep] = useState<1 | 2>(1)
   const [selectedPayment, setSelectedPayment] = useState<PaymentId>("efectivo")
   const [isProcessing, setIsProcessing] = useState(false)
-  const [activeNav, setActiveNav] = useState("cart")
 
   const cart = state.cart
   const storeName = cart.storeName ?? "UADE Eats"
 
+  const [mounted, setMounted] = useState(false)
+
   useEffect(() => {
-    if (cart.items.length === 0) {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted && cart.items.length === 0) {
       router.replace("/cart")
     }
-  }, [cart.items.length, router])
+  }, [mounted, cart.items.length, router])
+
+  if (!mounted) {
+    return (
+      <div className="min-h-svh flex items-center justify-center bg-[#F9F5F0]">
+        <Loader2 className="animate-spin" style={{ color: "#F97316" }} size={32} />
+      </div>
+    )
+  }
 
   if (cart.items.length === 0) return null
 
@@ -213,7 +226,7 @@ export default function CheckoutPage() {
         </main>
 
         {/* ── Fixed footer CTA ── */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 max-w-[480px] mx-auto bg-white border-t border-[#F3F4F6] px-4 pt-4 pb-2">
+        <div className="fixed bottom-0 left-0 right-0 z-50 max-w-[480px] mx-auto bg-white border-t border-[#F3F4F6] px-4 pt-4 pb-6 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           {step === 1 ? (
             <button
               onClick={handleContinue}
@@ -245,10 +258,8 @@ export default function CheckoutPage() {
               )}
             </button>
           )}
-          <div className="h-20" />
         </div>
 
-        <BottomNav active={activeNav} onChange={setActiveNav} />
       </div>
     </div>
   )
