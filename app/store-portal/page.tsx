@@ -14,7 +14,11 @@ import {
   Play,
   Check,
   PackageCheck,
-  AlertCircle
+  Edit2,
+  Trash2,
+  Plus,
+  Image as ImageIcon,
+  FolderOpen
 } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/context/AppContext"
@@ -48,14 +52,38 @@ interface Order {
   items: OrderItem[]
 }
 
+interface Product {
+  id: string
+  name: string
+  description: string
+  price: number
+  category: string
+  imageUrl: string
+}
+
 export default function StorePortalPage() {
   const router = useRouter()
   const { state } = useApp()
+  
+  // Orders State
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState<"active" | "completed">("active")
+  const [activeTab, setActiveTab] = useState<"active" | "completed" | "products">("active")
   const [selectedFilter, setSelectedFilter] = useState<"all" | "pending" | "preparing" | "ready">("all")
+
+  // Products State
+  const [products, setProducts] = useState<Product[]>([])
+  const [productsLoading, setProductsLoading] = useState(false)
+  const [showProductModal, setShowProductModal] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+
+  // Product Form State
+  const [prodName, setProdName] = useState("")
+  const [prodPrice, setProdPrice] = useState("")
+  const [prodCategory, setProdCategory] = useState("")
+  const [prodDescription, setProdDescription] = useState("")
+  const [prodImageUrl, setProdImageUrl] = useState("")
 
   const fetchOrders = useCallback(async (showIndicator = false) => {
     if (showIndicator) setRefreshing(true)
@@ -76,16 +104,33 @@ export default function StorePortalPage() {
     }
   }, [])
 
+  const fetchProducts = useCallback(async () => {
+    setProductsLoading(true)
+    try {
+      const res = await fetch("/api/store-portal/products")
+      const data = await res.json()
+      if (data.success) {
+        setProducts(data.products)
+      } else {
+        toast.error("Error al cargar productos", { description: data.error })
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error("Error de conexión", { description: "Revisá tu red" })
+    } finally {
+      setProductsLoading(false)
+    }
+  }, [])
+
   // Check role client-side
   useEffect(() => {
-    // If user is loaded and is not store owner, redirect
     if (state.user && state.user.role !== "store_owner") {
       router.replace("/")
       toast.error("Acceso denegado", { description: "Esta sección es solo para Comedores" })
     }
   }, [state.user, router])
 
-  // Poll orders every 5 seconds for a dynamic, real-time feel
+  // Poll orders every 5 seconds
   useEffect(() => {
     fetchOrders()
     const interval = setInterval(() => {
@@ -93,6 +138,13 @@ export default function StorePortalPage() {
     }, 5000)
     return () => clearInterval(interval)
   }, [fetchOrders])
+
+  // Fetch products when activeTab switches to products
+  useEffect(() => {
+    if (activeTab === "products") {
+      fetchProducts()
+    }
+  }, [activeTab, fetchProducts])
 
   const handleUpdateStatus = async (orderId: string, status: OrderStatus) => {
     try {
@@ -121,6 +173,87 @@ export default function StorePortalPage() {
     }
   }
 
+  // --- Product CRUD Actions ---
+  const handleOpenProductModal = (product: Product | null = null) => {
+    if (product) {
+      setEditingProduct(product)
+      setProdName(product.name)
+      setProdPrice(product.price.toString())
+      setProdCategory(product.category)
+      setProdDescription(product.description)
+      setProdImageUrl(product.imageUrl)
+    } else {
+      setEditingProduct(null)
+      setProdName("")
+      setProdPrice("")
+      setProdCategory("Menú")
+      setProdDescription("")
+      setProdImageUrl("")
+    }
+    setShowProductModal(true)
+  }
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!prodName.trim() || !prodPrice.trim() || !prodCategory.trim()) {
+      toast.error("Por favor completa los campos requeridos")
+      return
+    }
+
+    const payload = {
+      id: editingProduct?.id,
+      name: prodName,
+      price: parseFloat(prodPrice),
+      description: prodDescription,
+      category: prodCategory,
+      imageUrl: prodImageUrl || "/images/placeholder.jpg"
+    }
+
+    try {
+      const method = editingProduct ? "PUT" : "POST"
+      const res = await fetch("/api/store-portal/products", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        toast.success(editingProduct ? "Producto actualizado con éxito" : "Producto creado con éxito")
+        setShowProductModal(false)
+        fetchProducts()
+      } else {
+        toast.error("Error al guardar producto", { description: data.error })
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error("Error de conexión al guardar")
+    }
+  }
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este producto del menú?")) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/store-portal/products?id=${productId}`, {
+        method: "DELETE"
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        toast.success("Producto eliminado con éxito")
+        setProducts(prev => prev.filter(p => p.id !== productId))
+      } else {
+        toast.error("Error al eliminar", { description: data.error })
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error("Error de conexión al eliminar")
+    }
+  }
+
   // Filter orders
   const activeOrders = orders.filter(o => o.status === "pending" || o.status === "preparing" || o.status === "ready")
   const historicalOrders = orders.filter(o => o.status === "completed" || o.status === "cancelled")
@@ -130,7 +263,7 @@ export default function StorePortalPage() {
     return o.status === selectedFilter
   })
 
-  // Calculate statistics (today's Completed orders total revenue & counts)
+  // Calculate statistics
   const revenueToday = historicalOrders
     .filter(o => o.status === "completed" && new Date(o.createdAt).toDateString() === new Date().toDateString())
     .reduce((sum, o) => sum + o.total, 0)
@@ -181,93 +314,107 @@ export default function StorePortalPage() {
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
                 Monitoreo en tiempo real
               </span>
-              <button
-                onClick={() => fetchOrders(true)}
-                disabled={refreshing}
-                className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#F3F4F6] text-muted-foreground hover:text-[#1C1917] active:scale-95 transition-transform"
-              >
-                <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-              </button>
+              {activeTab !== "products" && (
+                <button
+                  onClick={() => fetchOrders(true)}
+                  disabled={refreshing}
+                  className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#F3F4F6] text-muted-foreground hover:text-[#1C1917] active:scale-95 transition-transform"
+                >
+                  <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* ── KPIs Bar ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-            {/* KPI 1 */}
-            <div className="bg-[#FFF7ED] border border-[#FFEDD5] p-3 rounded-2xl flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#F97316]/10 text-[#F97316] shrink-0">
-                <Clock size={20} />
+          {/* ── KPIs Bar (Hidden on Products View) ── */}
+          {activeTab !== "products" && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+              <div className="bg-[#FFF7ED] border border-[#FFEDD5] p-3 rounded-2xl flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#F97316]/10 text-[#F97316] shrink-0">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[#F97316] uppercase tracking-wider">Pendientes</p>
+                  <p className="text-xl font-black text-[#1C1917] leading-none mt-1">{pendingCount}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-[#F97316] uppercase tracking-wider">Pendientes</p>
-                <p className="text-xl font-black text-[#1C1917] leading-none mt-1">{pendingCount}</p>
-              </div>
-            </div>
 
-            {/* KPI 2 */}
-            <div className="bg-[#F0FDF4] border border-[#DCFCE7] p-3 rounded-2xl flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#16A34A]/10 text-[#16A34A] shrink-0">
-                <ChefHat size={20} />
+              <div className="bg-[#F0FDF4] border border-[#DCFCE7] p-3 rounded-2xl flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#16A34A]/10 text-[#16A34A] shrink-0">
+                  <ChefHat size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[#16A34A] uppercase tracking-wider">Preparando</p>
+                  <p className="text-xl font-black text-[#1C1917] leading-none mt-1">{preparingCount}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-[#16A34A] uppercase tracking-wider">Preparando</p>
-                <p className="text-xl font-black text-[#1C1917] leading-none mt-1">{preparingCount}</p>
-              </div>
-            </div>
 
-            {/* KPI 3 */}
-            <div className="bg-[#EFF6FF] border border-[#DBEAFE] p-3 rounded-2xl flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#2563EB]/10 text-[#2563EB] shrink-0">
-                <CheckCircle2 size={20} />
+              <div className="bg-[#EFF6FF] border border-[#DBEAFE] p-3 rounded-2xl flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#2563EB]/10 text-[#2563EB] shrink-0">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wider">Listos</p>
+                  <p className="text-xl font-black text-[#1C1917] leading-none mt-1">{readyCount}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wider">Listos</p>
-                <p className="text-xl font-black text-[#1C1917] leading-none mt-1">{readyCount}</p>
-              </div>
-            </div>
 
-            {/* KPI 4 */}
-            <div className="bg-purple-50 border border-purple-100 p-3 rounded-2xl flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-500/10 text-purple-600 shrink-0">
-                <TrendingUp size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Ventas Hoy</p>
-                <p className="text-lg font-black text-[#1C1917] leading-none mt-1">
-                  ${revenueToday.toLocaleString("es-AR")}
-                </p>
+              <div className="bg-purple-50 border border-purple-100 p-3 rounded-2xl flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-500/10 text-purple-600 shrink-0">
+                  <TrendingUp size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Ventas Hoy</p>
+                  <p className="text-lg font-black text-[#1C1917] leading-none mt-1">
+                    ${revenueToday.toLocaleString("es-AR")}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* ── Main Tab Switcher ── */}
           <div className="flex bg-[#F3F4F6] p-1 rounded-2xl">
             <button
               onClick={() => setActiveTab("active")}
-              className={`flex-1 py-2.5 text-sm font-black rounded-xl transition-all flex items-center justify-center gap-2 ${
+              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === "active"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
               }`}
             >
-              <ChefHat size={16} />
+              <ChefHat size={14} />
               Pedidos Activos
-              <span className="bg-[#F97316] text-white text-xs px-2 py-0.5 rounded-full font-bold">
+              <span className="bg-[#F97316] text-white text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">
                 {activeOrders.length}
               </span>
             </button>
             <button
               onClick={() => setActiveTab("completed")}
-              className={`flex-1 py-2.5 text-sm font-black rounded-xl transition-all flex items-center justify-center gap-2 ${
+              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === "completed"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
               }`}
             >
-              <PackageCheck size={16} />
-              Historial / Completados
-              <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full font-bold">
+              <PackageCheck size={14} />
+              Historial
+              <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">
                 {historicalOrders.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === "products"
+                  ? "bg-white text-[#1C1917] shadow-sm"
+                  : "text-muted-foreground hover:text-[#1C1917]"
+              }`}
+            >
+              <FolderOpen size={14} />
+              Gestionar Menú
+              <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">
+                {products.length}
               </span>
             </button>
           </div>
@@ -279,7 +426,6 @@ export default function StorePortalPage() {
           {/* Active Orders Section */}
           {activeTab === "active" && (
             <div className="space-y-4">
-              {/* Active Filter subbar */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                 <button
                   onClick={() => setSelectedFilter("all")}
@@ -335,7 +481,6 @@ export default function StorePortalPage() {
                       key={order.id}
                       className="rounded-3xl border border-[#F3F4F6] bg-card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden"
                     >
-                      {/* State top accent strip */}
                       <div
                         className="absolute top-0 left-0 right-0 h-1.5"
                         style={{
@@ -349,7 +494,6 @@ export default function StorePortalPage() {
                       />
 
                       <div className="space-y-4">
-                        {/* Order Header */}
                         <div className="flex items-start justify-between">
                           <div>
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
@@ -388,7 +532,6 @@ export default function StorePortalPage() {
                           </span>
                         </div>
 
-                        {/* Order Items list */}
                         <div className="bg-[#F9F5F0]/65 p-3 rounded-2xl space-y-2 border border-black/5">
                           {order.items.map((item) => (
                             <div key={item.id} className="flex items-center justify-between text-xs">
@@ -410,7 +553,6 @@ export default function StorePortalPage() {
                           </div>
                         </div>
 
-                        {/* Extra metadata */}
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span className="flex items-center gap-1 font-medium">
                             <Clock size={12} />
@@ -422,7 +564,6 @@ export default function StorePortalPage() {
                         </div>
                       </div>
 
-                      {/* Action buttons footer */}
                       <div className="mt-5 pt-4 border-t border-[#F3F4F6] flex items-center gap-2">
                         {order.status === "pending" && (
                           <>
@@ -464,7 +605,6 @@ export default function StorePortalPage() {
 
                         {order.status === "ready" && (
                           <div className="w-full flex flex-col gap-3">
-                            {/* Giant Pickup Code Box */}
                             <div className="bg-[#EFF6FF] border border-[#DBEAFE] p-3 rounded-2xl text-center">
                               <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-wider block">Código de Retiro</span>
                               <span className="text-3xl font-black text-[#2563EB] tracking-widest">{order.pickupCode}</span>
@@ -486,7 +626,7 @@ export default function StorePortalPage() {
             </div>
           )}
 
-          {/* Historical / Completed Section */}
+          {/* Historical Orders Section */}
           {activeTab === "completed" && (
             <div className="space-y-4">
               {historicalOrders.length === 0 ? (
@@ -552,6 +692,104 @@ export default function StorePortalPage() {
             </div>
           )}
 
+          {/* Menu / Catalog Management Section */}
+          {activeTab === "products" && (
+            <div className="space-y-4">
+              {/* Product Header Buttons */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-black text-[#1C1917]">Carta del Local</h2>
+                  <p className="text-xs text-muted-foreground font-medium mt-0.5">Edita y actualiza los platos de tu catálogo</p>
+                </div>
+                <button
+                  onClick={() => handleOpenProductModal(null)}
+                  className="bg-[#F97316] hover:bg-[#EA580C] text-white text-xs font-bold py-2.5 px-4 rounded-2xl flex items-center gap-1.5 shadow-md active:scale-95 transition-transform"
+                >
+                  <Plus size={14} />
+                  Agregar Plato
+                </button>
+              </div>
+
+              {productsLoading ? (
+                <div className="flex flex-col items-center justify-center p-12">
+                  <RefreshCw className="animate-spin text-muted-foreground" size={24} />
+                  <p className="text-xs text-muted-foreground font-bold mt-2">Cargando catálogo...</p>
+                </div>
+              ) : products.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 bg-[#F9F5F0] rounded-3xl border border-dashed border-[#E5E7EB]">
+                  <ImageIcon size={48} className="text-muted-foreground/30" />
+                  <p className="mt-4 font-bold text-muted-foreground text-sm">Tu menú no tiene productos</p>
+                  <p className="text-xs text-muted-foreground mt-1">Crea tu primer producto con el botón "Agregar Plato"</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {products.map((product) => (
+                    <div
+                      key={product.id}
+                      className="rounded-3xl border border-[#F3F4F6] bg-card p-4 flex gap-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden"
+                    >
+                      {/* Product Image */}
+                      <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#F3F4F6] shrink-0 border border-border/40 relative">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/images/placeholder.jpg"
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-[#F3F4F6]">
+                            <ImageIcon size={20} />
+                          </div>
+                        )}
+                        <span className="absolute top-1 left-1 text-[9px] font-black uppercase bg-[#F97316] text-white px-1.5 py-0.5 rounded-lg shadow-sm">
+                          {product.category}
+                        </span>
+                      </div>
+
+                      {/* Product Content Details */}
+                      <div className="flex-1 flex flex-col justify-between min-w-0">
+                        <div>
+                          <div className="flex items-start justify-between gap-1">
+                            <h3 className="font-black text-sm text-[#1C1917] leading-tight truncate">
+                              {product.name}
+                            </h3>
+                            <span className="text-sm font-black text-[#F97316] shrink-0">
+                              ${product.price.toLocaleString("es-AR")}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1 leading-relaxed">
+                            {product.description || "Sin descripción."}
+                          </p>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#F3F4F6]">
+                          <button
+                            onClick={() => handleOpenProductModal(product)}
+                            className="flex-1 py-1.5 bg-[#F9F5F0] hover:bg-[#F3F4F6] text-[#1C1917] rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 transition-colors border border-[#E5E7EB]"
+                          >
+                            <Edit2 size={10} />
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="px-2.5 py-1.5 border border-red-100 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl text-[10px] font-bold flex items-center justify-center transition-colors"
+                            title="Eliminar del menú"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </main>
         
         {/* Footer info */}
@@ -560,6 +798,122 @@ export default function StorePortalPage() {
         </footer>
 
       </div>
+
+      {/* --- ADD / EDIT PRODUCT MODAL --- */}
+      {showProductModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-[480px] bg-white rounded-3xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-8 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-[#F3F4F6] flex items-center justify-between">
+              <div>
+                <h3 className="font-black text-[#1C1917] text-base leading-none">
+                  {editingProduct ? "Editar Producto" : "Nuevo Producto"}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">Completa los datos del plato</p>
+              </div>
+              <button
+                onClick={() => setShowProductModal(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-[#F3F4F6] text-muted-foreground hover:text-foreground hover:bg-[#E5E7EB] transition-colors"
+              >
+                <XCircle size={18} />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveProduct} className="p-6 space-y-4">
+              {/* Product Name */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#1C1917]">Nombre del Plato *</label>
+                <input
+                  type="text"
+                  required
+                  value={prodName}
+                  onChange={(e) => setProdName(e.target.value)}
+                  placeholder="Ej. Milanese con puré"
+                  className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Product Price */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#1C1917]">Precio (ARS) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={prodPrice}
+                    onChange={(e) => setProdPrice(e.target.value)}
+                    placeholder="12500"
+                    className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+                  />
+                </div>
+
+                {/* Product Category */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#1C1917]">Categoría *</label>
+                  <select
+                    required
+                    value={prodCategory}
+                    onChange={(e) => setProdCategory(e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+                  >
+                    <option value="Menú del día">Menú del día</option>
+                    <option value="Plato principal">Plato principal</option>
+                    <option value="Salad bar">Salad bar</option>
+                    <option value="Postre">Postre</option>
+                    <option value="Cafetería">Cafetería</option>
+                    <option value="Bebidas">Bebidas</option>
+                    <option value="Budines y Scons">Budines y Scons</option>
+                    <option value="Snacks">Snacks</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Product Image URL */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#1C1917]">URL de Imagen / Foto</label>
+                <input
+                  type="text"
+                  value={prodImageUrl}
+                  onChange={(e) => setProdImageUrl(e.target.value)}
+                  placeholder="Ej. /images/products/mila.jpg"
+                  className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+                />
+              </div>
+
+              {/* Product Description */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#1C1917]">Descripción</label>
+                <textarea
+                  rows={3}
+                  value={prodDescription}
+                  onChange={(e) => setProdDescription(e.target.value)}
+                  placeholder="Detalla los ingredientes o especificaciones..."
+                  className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors resize-none"
+                />
+              </div>
+
+              {/* Modal Footer Buttons */}
+              <div className="pt-3 border-t border-[#F3F4F6] flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowProductModal(false)}
+                  className="flex-1 py-3 bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#1C1917] font-bold rounded-2xl text-xs transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-[#F97316] hover:bg-[#EA580C] text-white font-bold rounded-2xl text-xs transition-colors shadow-md"
+                >
+                  Guardar Plato
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
