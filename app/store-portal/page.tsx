@@ -883,7 +883,9 @@ export default function StorePortalPage() {
                     className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
                   >
                     <option value="Menú del día">Menú del día</option>
+                    <option value="Platos">Platos</option>
                     <option value="Plato principal">Plato principal</option>
+                    <option value="Platos principales">Platos principales</option>
                     <option value="Salad bar">Salad bar</option>
                     <option value="Postre">Postre</option>
                     <option value="Cafetería">Cafetería</option>
