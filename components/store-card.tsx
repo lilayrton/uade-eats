@@ -16,7 +16,7 @@ interface StoreCardProps {
 export function StoreCard({ store, onClick }: StoreCardProps) {
   return (
     <Link
-      href="/store"
+      href={`/store/${store.id}`}
       onClick={onClick}
       className="block w-full text-left bg-card rounded-2xl overflow-hidden shadow-sm border border-border/50 active:scale-[0.99] transition-transform duration-150 hover:shadow-md"
     >

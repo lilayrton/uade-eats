@@ -7,28 +7,25 @@ import { ArrowLeft, Star, Clock, ShoppingBag } from "lucide-react"
 import { ProductCard } from "@/components/product-card"
 import { CategoryTabs } from "@/components/category-tabs"
 import { BottomNav } from "@/components/bottom-nav"
-import type { Product } from "@/lib/types"
-// TODO: replace with API call
-import { MOCK_STORES, MOCK_PRODUCTS } from "@/lib/mock-data"
+import type { Product, Store } from "@/lib/types"
 import { useApp } from "@/context/AppContext"
 
-const STORE_ID = "store-1"
+interface StorePageClientProps {
+  storeData: Store
+  storeProducts: Product[]
+}
 
-export default function StorePage() {
+export default function StorePageClient({ storeData, storeProducts }: StorePageClientProps) {
   const router = useRouter()
   const { state, dispatch, cartCount } = useApp()
-  const [activeCategory, setActiveCategory] = useState("Bebidas")
   const [activeNav, setActiveNav] = useState("home")
-
-  // TODO: replace with API call (fetch store by id)
-  const storeData = MOCK_STORES.find((s) => s.id === STORE_ID)!
-  // TODO: replace with API call (fetch products by storeId)
-  const storeProducts = MOCK_PRODUCTS.filter((p) => p.storeId === STORE_ID)
 
   const categories = useMemo(
     () => Array.from(new Set(storeProducts.map((p) => p.category))),
     [storeProducts]
   )
+
+  const [activeCategory, setActiveCategory] = useState(categories[0] || "Bebidas")
 
   const visibleProducts = useMemo(
     () => storeProducts.filter((p) => p.category === activeCategory),
@@ -48,9 +45,9 @@ export default function StorePage() {
 
   const handleAdd = useCallback(
     (product: Product) => {
-      dispatch({ type: "ADD_TO_CART", payload: { product, storeId: STORE_ID } })
+      dispatch({ type: "ADD_TO_CART", payload: { product, storeId: storeData.id } })
     },
-    [dispatch]
+    [dispatch, storeData.id]
   )
 
   const handleRemove = useCallback(

@@ -15,3 +15,28 @@ model User {
   role         String   @default("student")
   createdAt    DateTime @default(now())
 }
+
+model Store {
+  id                   String    @id @default(cuid())
+  name                 String
+  category             String
+  tagline              String
+  imageUrl             String
+  estimatedWaitMinutes Int
+  isOpen               Boolean   @default(true)
+  rating               Float
+  createdAt            DateTime  @default(now())
+  products             Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  description String
+  price       Float
+  category    String
+  imageUrl    String
+  createdAt   DateTime @default(now())
+}
