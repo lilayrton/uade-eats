@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { dispatchEvent } from "@/lib/events"
 
 export async function POST(req: Request) {
   try {
@@ -64,6 +65,9 @@ export async function POST(req: Request) {
         }
       }
     })
+
+    // Dispatch event to SSE connections
+    dispatchEvent("new_order", { orderId: order.id, storeId })
 
     return NextResponse.json({ success: true, order })
   } catch (error) {

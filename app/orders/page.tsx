@@ -50,12 +50,30 @@ export default function OrdersPage() {
     }
   }, [])
 
+  // Listen to SSE events for real-time Event-Driven updates
   useEffect(() => {
     fetchOrders()
-    const interval = setInterval(() => {
-      fetchOrders()
-    }, 5000)
-    return () => clearInterval(interval)
+
+    const eventSource = new EventSource("/api/sse")
+
+    eventSource.onmessage = (event) => {
+      try {
+        const { type } = JSON.parse(event.data)
+        if (type === "order_updated" || type === "new_order") {
+          fetchOrders()
+        }
+      } catch (err) {
+        console.error("SSE parse error:", err)
+      }
+    }
+
+    eventSource.onerror = (err) => {
+      console.error("SSE connection error:", err)
+    }
+
+    return () => {
+      eventSource.close()
+    }
   }, [fetchOrders])
 
   const activeOrders = orders.filter((o) =>

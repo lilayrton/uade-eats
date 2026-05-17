@@ -130,14 +130,34 @@ export default function StorePortalPage() {
     }
   }, [state.user, router])
 
-  // Poll orders every 5 seconds
+  // Listen to SSE events for real-time Event-Driven updates
   useEffect(() => {
     fetchOrders()
-    const interval = setInterval(() => {
-      fetchOrders(false)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [fetchOrders])
+
+    const eventSource = new EventSource("/api/sse")
+
+    eventSource.onmessage = (event) => {
+      try {
+        const { type, data } = JSON.parse(event.data)
+        if (type === "new_order" && state.user?.storeId === data.storeId) {
+          fetchOrders(false)
+          toast.info("¡Nuevo pedido recibido! 🔔", { duration: 4000 })
+        } else if (type === "order_updated") {
+          fetchOrders(false)
+        }
+      } catch (err) {
+        console.error("SSE parse error:", err)
+      }
+    }
+
+    eventSource.onerror = (err) => {
+      console.error("SSE connection error:", err)
+    }
+
+    return () => {
+      eventSource.close()
+    }
+  }, [fetchOrders, state.user?.storeId])
 
   // Fetch products when activeTab switches to products
   useEffect(() => {

@@ -261,80 +261,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [state.authStatus, state.user])
 
-  const prevStatuses = useRef<Record<string, string>>({})
-
-  // Poll orders every 5 seconds to detect state changes and trigger notifications
+  // Listen to SSE events for real-time Event-Driven updates and trigger notifications
   useEffect(() => {
     if (state.authStatus !== "authenticated" || state.user?.role !== "student") {
       return
     }
 
-    const checkOrders = async () => {
+    const eventSource = new EventSource("/api/sse")
+
+    eventSource.onmessage = (event) => {
       try {
-        const res = await fetch("/api/orders")
-        const data = await res.json()
-        if (data.success && Array.isArray(data.orders)) {
-          data.orders.forEach((order: any) => {
-            const lastStatus = prevStatuses.current[order.id]
-            if (lastStatus && lastStatus !== order.status) {
-              let title = ""
-              let body = ""
+        const { type, data } = JSON.parse(event.data)
+        
+        // Verify this update belongs to this student
+        if (type === "order_updated" && data.userId === state.user?.id) {
+          const { status, order } = data
+          const storeName = order?.store?.name || "Comedor"
 
-              if (order.status === "preparing") {
-                title = "¡Pedido en preparación! 👨‍🍳"
-                body = `Tu pedido de ${order.store.name} ya se está preparando.`
-              } else if (order.status === "ready") {
-                title = "¡Pedido listo! 🛵"
-                body = `Tu pedido de ${order.store.name} está listo. Retiralo con el código #${order.pickupCode}.`
-              } else if (order.status === "completed") {
-                title = "¡Pedido entregado! 🎉"
-                body = `¡Gracias por tu compra en ${order.store.name}! Que lo disfrutes.`
-              } else if (order.status === "cancelled") {
-                title = "Pedido cancelado ❌"
-                body = `Tu pedido de ${order.store.name} fue cancelado.`
-              }
+          let title = ""
+          let body = ""
 
-              if (title && body) {
-                dispatch({
-                  type: "ADD_NOTIFICATION",
-                  payload: { type: "order", title, body }
-                })
-                toast.success(title, {
-                  description: body,
-                  duration: 6000,
-                })
-              }
-            }
-            prevStatuses.current[order.id] = order.status
-          })
+          if (status === "preparing") {
+            title = "¡Pedido en preparación! 👨‍🍳"
+            body = `Tu pedido de ${storeName} ya se está preparando.`
+          } else if (status === "ready") {
+            title = "¡Pedido listo! 🛵"
+            body = `Tu pedido de ${storeName} está listo. Retiralo con el código #${order.pickupCode}.`
+          } else if (status === "completed") {
+            title = "¡Pedido entregado! 🎉"
+            body = `¡Gracias por tu compra en ${storeName}! Que lo disfrutes.`
+          } else if (status === "cancelled") {
+            title = "Pedido cancelado ❌"
+            body = `Tu pedido de ${storeName} fue cancelado.`
+          }
+
+          if (title && body) {
+            dispatch({
+              type: "ADD_NOTIFICATION",
+              payload: { type: "order", title, body }
+            })
+            toast.success(title, {
+              description: body,
+              duration: 6000,
+            })
+          }
         }
-      } catch (e) {
-        console.error("Error checking order updates for notifications:", e)
+      } catch (err) {
+        console.error("SSE parse error:", err)
       }
     }
 
-    // Populate initial statuses without notifications
-    const initialTimeout = setTimeout(async () => {
-      try {
-        const res = await fetch("/api/orders")
-        const data = await res.json()
-        if (data.success && Array.isArray(data.orders)) {
-          data.orders.forEach((order: any) => {
-            prevStatuses.current[order.id] = order.status
-          })
-        }
-      } catch (e) {
-        console.error(e)
-      }
-    }, 1000)
-
-    const interval = setInterval(checkOrders, 5000)
+    eventSource.onerror = (err) => {
+      console.error("SSE connection error:", err)
+    }
 
     return () => {
-      clearTimeout(initialTimeout)
-      clearInterval(interval)
+      eventSource.close()
     }
-  }, [state.authStatus, state.user])
+  }, [state.authStatus, state.user, dispatch])
 
   return (
     <AppContext.Provider value={{ state, dispatch, cartCount }}>
