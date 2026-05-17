@@ -8,6 +8,7 @@ import {
   useRef,
   type ReactNode,
 } from "react"
+import { toast } from "sonner"
 import type {
   AuthStatus,
   User,
@@ -39,32 +40,7 @@ const initialState: AppState = {
   authStatus: "unauthenticated",
   user: null,
   cart: { storeId: null, storeName: null, items: [] },
-  notifications: [
-    {
-      id: "n1",
-      type: "order",
-      title: "¡Tu pedido está listo!",
-      body: "Pasá a retirar tu pedido en Cafetería Pepe. Código #42.",
-      timestamp: Date.now() - 300000,
-      read: false,
-    },
-    {
-      id: "n2",
-      type: "promo",
-      title: "Oferta del día 🎉",
-      body: "Tostado Mixto + Café con Leche por $3.200 en Cafetería Pepe. Solo hoy.",
-      timestamp: Date.now() - 3600000,
-      read: false,
-    },
-    {
-      id: "n3",
-      type: "system",
-      title: "Bienvenido a UADE EATS",
-      body: "Hacé tu primer pedido y retiralo sin filas.",
-      timestamp: Date.now() - 86400000,
-      read: true,
-    },
-  ],
+  notifications: [],
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +60,7 @@ type AppAction =
   | { type: "RESTORE_SESSION"; payload: User }
   | { type: "MARK_NOTIFICATION_READ"; payload: { id: string } }
   | { type: "MARK_ALL_READ" }
+  | { type: "ADD_NOTIFICATION"; payload: { type: "order" | "promo" | "system"; title: string; body: string } }
 
 // ---------------------------------------------------------------------------
 // Reducer
@@ -208,6 +185,21 @@ function appReducer(state: AppState, action: AppAction): AppState {
         notifications: state.notifications.map((n) => ({ ...n, read: true })),
       }
 
+    case "ADD_NOTIFICATION": {
+      const newNotif: Notification = {
+        id: `n_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        type: action.payload.type,
+        title: action.payload.title,
+        body: action.payload.body,
+        timestamp: Date.now(),
+        read: false,
+      }
+      return {
+        ...state,
+        notifications: [newNotif, ...state.notifications],
+      }
+    }
+
     default:
       return state
   }
@@ -266,6 +258,81 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       document.cookie = "uade-eats-auth=; path=/; max-age=0"
       localStorage.removeItem("uade-eats-user")
+    }
+  }, [state.authStatus, state.user])
+
+  const prevStatuses = useRef<Record<string, string>>({})
+
+  // Poll orders every 5 seconds to detect state changes and trigger notifications
+  useEffect(() => {
+    if (state.authStatus !== "authenticated" || state.user?.role !== "student") {
+      return
+    }
+
+    const checkOrders = async () => {
+      try {
+        const res = await fetch("/api/orders")
+        const data = await res.json()
+        if (data.success && Array.isArray(data.orders)) {
+          data.orders.forEach((order: any) => {
+            const lastStatus = prevStatuses.current[order.id]
+            if (lastStatus && lastStatus !== order.status) {
+              let title = ""
+              let body = ""
+
+              if (order.status === "preparing") {
+                title = "¡Pedido en preparación! 👨‍🍳"
+                body = `Tu pedido de ${order.store.name} ya se está preparando.`
+              } else if (order.status === "ready") {
+                title = "¡Pedido listo! 🛵"
+                body = `Tu pedido de ${order.store.name} está listo. Retiralo con el código #${order.pickupCode}.`
+              } else if (order.status === "completed") {
+                title = "¡Pedido entregado! 🎉"
+                body = `¡Gracias por tu compra en ${order.store.name}! Que lo disfrutes.`
+              } else if (order.status === "cancelled") {
+                title = "Pedido cancelado ❌"
+                body = `Tu pedido de ${order.store.name} fue cancelado.`
+              }
+
+              if (title && body) {
+                dispatch({
+                  type: "ADD_NOTIFICATION",
+                  payload: { type: "order", title, body }
+                })
+                toast.success(title, {
+                  description: body,
+                  duration: 6000,
+                })
+              }
+            }
+            prevStatuses.current[order.id] = order.status
+          })
+        }
+      } catch (e) {
+        console.error("Error checking order updates for notifications:", e)
+      }
+    }
+
+    // Populate initial statuses without notifications
+    const initialTimeout = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/orders")
+        const data = await res.json()
+        if (data.success && Array.isArray(data.orders)) {
+          data.orders.forEach((order: any) => {
+            prevStatuses.current[order.id] = order.status
+          })
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }, 1000)
+
+    const interval = setInterval(checkOrders, 5000)
+
+    return () => {
+      clearTimeout(initialTimeout)
+      clearInterval(interval)
     }
   }, [state.authStatus, state.user])
 
