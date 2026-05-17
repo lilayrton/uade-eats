@@ -58,6 +58,15 @@ export default function HomePage() {
 
   const openCount = filtered.filter((s) => s.isOpen).length
 
+  const hour = new Date().getHours()
+  let greeting = "Buenas noches"
+  if (hour >= 7 && hour < 12) {
+    greeting = "Buen día"
+  } else if (hour >= 12 && hour < 19) {
+    greeting = "Buenas tardes"
+  }
+  const firstName = state.user?.name ? state.user.name.split(" ")[0] : ""
+
   return (
     <div className="min-h-svh flex flex-col items-center" style={{ backgroundColor: "var(--brand-surface)" }}>
       {/* Mobile container */}
@@ -102,8 +111,8 @@ export default function HomePage() {
 
           {/* Greeting */}
           <div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Buen día 👋 &nbsp;¿Qué vas a pedir hoy?
+            <p className="text-sm text-muted-foreground leading-relaxed" suppressHydrationWarning>
+              {greeting}{firstName ? `, ${firstName}` : ""} 👋 &nbsp;¿Qué vas a pedir hoy?
             </p>
           </div>
 
