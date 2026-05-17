@@ -77,7 +77,7 @@ const initialState: AppState = {
 type AppAction =
   | { type: "SET_USER"; payload: User }
   | { type: "CLEAR_USER" }
-  | { type: "LOGIN"; payload: { email: string } }
+  | { type: "LOGIN"; payload: User }
   | { type: "LOGOUT" }
   | { type: "ADD_TO_CART"; payload: { product: Product; storeId: string } }
   | { type: "REMOVE_FROM_CART"; payload: { productId: string } }
@@ -104,11 +104,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, user: null }
 
     case "LOGIN": {
-      // TODO: replace with real auth provider
-      const email = action.payload.email.toLowerCase().trim()
-      if (!email.endsWith("@uade.edu.ar")) return state
-      const found = findUserByEmail(email)
-      return { ...state, user: found ?? MOCK_USER, authStatus: "authenticated" }
+      return { ...state, user: action.payload, authStatus: "authenticated" }
     }
 
     case "REGISTER": {
@@ -291,10 +287,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         try {
           dispatch({ type: "RESTORE_SESSION", payload: JSON.parse(stored) as User })
         } catch {
-          dispatch({ type: "LOGIN", payload: { email: MOCK_USER.email } })
+          dispatch({ type: "LOGOUT" })
         }
       } else {
-        dispatch({ type: "LOGIN", payload: { email: MOCK_USER.email } })
+        dispatch({ type: "LOGOUT" })
       }
     }
   }, [])
@@ -307,13 +303,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isMounted.current = true
       return
     }
-    if (state.authStatus === "authenticated") {
+    if (state.authStatus === "authenticated" && state.user) {
       document.cookie = "uade-eats-auth=1; path=/"
+      localStorage.setItem("uade-eats-user", JSON.stringify(state.user))
     } else {
       document.cookie = "uade-eats-auth=; path=/; max-age=0"
       localStorage.removeItem("uade-eats-user")
     }
-  }, [state.authStatus])
+  }, [state.authStatus, state.user])
 
   return (
     <AppContext.Provider value={{ state, dispatch, cartCount }}>
