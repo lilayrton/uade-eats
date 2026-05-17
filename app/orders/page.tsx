@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Bell, ChevronRight, MapPin, CheckCircle2, Loader2, Store } from "lucide-react"
 import { BottomNav } from "@/components/bottom-nav"
@@ -36,20 +36,27 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetch("/api/orders")
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setOrders(data.orders)
-        }
-        setLoading(false)
-      })
-      .catch(e => {
-        console.error(e)
-        setLoading(false)
-      })
+  const fetchOrders = useCallback(async () => {
+    try {
+      const res = await fetch("/api/orders")
+      const data = await res.json()
+      if (data.success) {
+        setOrders(data.orders)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchOrders()
+    const interval = setInterval(() => {
+      fetchOrders()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [fetchOrders])
 
   const activeOrders = orders.filter((o) =>
     o.status === "pending" || o.status === "preparing" || o.status === "ready"
