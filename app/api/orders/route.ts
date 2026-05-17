@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { dispatchEvent } from "@/lib/events"
+import { MercadoPagoConfig, Preference } from "mercadopago"
 
 export async function POST(req: Request) {
   try {
@@ -44,6 +45,8 @@ export async function POST(req: Request) {
     // Generate random 4-digit pickup code
     const pickupCode = Math.floor(1000 + Math.random() * 9000)
 
+    const isMP = paymentMethod === "mercadopago"
+
     const order = await db.order.create({
       data: {
         userId: session.id,
@@ -51,7 +54,7 @@ export async function POST(req: Request) {
         total,
         paymentMethod: paymentMethod || "efectivo",
         pickupCode,
-        status: "pending",
+        status: isMP ? "pending_payment" : "pending",
         items: {
           create: orderItemsData
         }
@@ -66,7 +69,54 @@ export async function POST(req: Request) {
       }
     })
 
-    // Dispatch event to SSE connections
+    if (isMP) {
+      try {
+        const mpClient = new MercadoPagoConfig({
+          accessToken: process.env.MP_ACCESS_TOKEN || "TEST-MOCK-ACCESS-TOKEN-SANDBOX"
+        })
+        const mpPreference = new Preference(mpClient)
+        const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
+
+        const mpItems = order.items.map(item => ({
+          id: item.productId,
+          title: item.product.name,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          currency_id: "ARS"
+        }))
+
+        const preferenceResult = await mpPreference.create({
+          body: {
+            items: mpItems,
+            external_reference: order.id,
+            back_urls: {
+              success: `${baseUrl}/checkout/success?orderId=${order.id}`,
+              failure: `${baseUrl}/checkout/failure?orderId=${order.id}`,
+              pending: `${baseUrl}/checkout/pending?orderId=${order.id}`
+            },
+            auto_return: "approved"
+          }
+        })
+
+        return NextResponse.json({
+          success: true,
+          order,
+          initPoint: preferenceResult.init_point,
+          preferenceId: preferenceResult.id
+        })
+      } catch (mpError) {
+        console.error("Mercado Pago Preference creation error:", mpError)
+        const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
+        return NextResponse.json({
+          success: true,
+          order,
+          initPoint: `${baseUrl}/checkout/success?orderId=${order.id}&mock=true`,
+          preferenceId: "MOCK_PREFERENCE_ID"
+        })
+      }
+    }
+
+    // Dispatch event to SSE connections (Cash payment is immediate)
     dispatchEvent("new_order", { orderId: order.id, storeId })
 
     return NextResponse.json({ success: true, order })

@@ -153,11 +153,16 @@ export default function CheckoutPage() {
       const data = await res.json()
       if (data.success) {
         dispatch({ type: "CLEAR_CART" })
-        router.push("/orders")
-        toast.success("¡Pedido confirmado!", {
-          description: `Tu pedido fue recibido por ${storeName}`,
-          duration: 4000,
-        })
+        if (selectedPayment === "mercadopago" && data.initPoint) {
+          toast.success("Redirigiendo a Mercado Pago...")
+          window.location.href = data.initPoint
+        } else {
+          router.push("/orders")
+          toast.success("¡Pedido confirmado!", {
+            description: `Tu pedido fue recibido por ${storeName}`,
+            duration: 4000,
+          })
+        }
       } else {
         toast.error("Error al confirmar el pedido", { description: data.error })
         setIsProcessing(false)
