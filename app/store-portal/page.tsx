@@ -894,16 +894,83 @@ export default function StorePortalPage() {
                 </div>
               </div>
 
-              {/* Product Image URL */}
+              {/* Product Image Upload & URL */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#1C1917]">URL de Imagen / Foto</label>
-                <input
-                  type="text"
-                  value={prodImageUrl}
-                  onChange={(e) => setProdImageUrl(e.target.value)}
-                  placeholder="Ej. /images/products/mila.jpg"
-                  className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
-                />
+                <label className="text-xs font-bold text-[#1C1917] block">Imagen del Plato</label>
+                <div className="flex items-center gap-3">
+                  {/* Image Preview */}
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#F3F4F6] border border-[#E5E7EB] shrink-0 flex items-center justify-center relative">
+                    {prodImageUrl ? (
+                      <img
+                        src={prodImageUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon size={20} className="text-muted-foreground" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-1.5">
+                    {/* File Upload Trigger */}
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer bg-[#F9F5F0] hover:bg-[#F3E8FF] border border-[#E5E7EB] px-4 py-2.5 rounded-2xl text-xs font-bold text-[#1C1917] transition-colors flex items-center gap-1.5 active:scale-95">
+                        <Plus size={14} />
+                        Elegir archivo local
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+
+                            // Set loading state or toast
+                            const loadingToast = toast.loading("Subiendo imagen...")
+                            
+                            try {
+                              const formData = new FormData()
+                              formData.append("file", file)
+
+                              const res = await fetch("/api/upload", {
+                                method: "POST",
+                                body: formData,
+                              })
+                              const data = await res.json()
+
+                              if (data.success) {
+                                setProdImageUrl(data.url)
+                                toast.success("¡Imagen subida con éxito! 🎉", { id: loadingToast })
+                              } else {
+                                toast.error("Error al subir", { description: data.error, id: loadingToast })
+                              }
+                            } catch (err) {
+                              console.error(err)
+                              toast.error("Error de red al subir la imagen", { id: loadingToast })
+                            }
+                          }}
+                        />
+                      </label>
+                      {prodImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setProdImageUrl("")}
+                          className="px-3 py-2.5 border border-red-100 text-red-500 bg-red-50 hover:bg-red-100 rounded-2xl text-xs font-bold transition-colors"
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+                    {/* Manual input option as a small collapse / option */}
+                    <input
+                      type="text"
+                      value={prodImageUrl}
+                      onChange={(e) => setProdImageUrl(e.target.value)}
+                      placeholder="O pega una URL externa aquí..."
+                      className="w-full rounded-2xl border border-border bg-card px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Product Description */}
