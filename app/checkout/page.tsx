@@ -226,7 +226,7 @@ export default function CheckoutPage() {
         </main>
 
         {/* ── Fixed footer CTA ── */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 max-w-[480px] mx-auto bg-white border-t border-[#F3F4F6] px-4 pt-4 pb-6 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50 bg-white border-t border-[#F3F4F6] px-4 pt-4 pb-6 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           {step === 1 ? (
             <button
               onClick={handleContinue}
