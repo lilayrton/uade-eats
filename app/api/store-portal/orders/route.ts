@@ -39,7 +39,7 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({ success: true, orders })
+    return NextResponse.json({ success: true, storeId: user.storeId, orders })
   } catch (error) {
     console.error("Error fetching portal orders:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })

@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     // Also set the old auth cookie for frontend backward compatibility
     cookieStore.set("uade-eats-auth", "1", { path: "/" })
 
-    return NextResponse.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } })
+    return NextResponse.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role, storeId: user.storeId } })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

@@ -77,6 +77,7 @@ export default function StorePortalPage() {
   const [productsLoading, setProductsLoading] = useState(false)
   const [showProductModal, setShowProductModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [storeId, setStoreId] = useState<string | null>(null)
 
   // Product Form State
   const [prodName, setProdName] = useState("")
@@ -92,6 +93,9 @@ export default function StorePortalPage() {
       const data = await res.json()
       if (data.success) {
         setOrders(data.orders)
+        if (data.storeId) {
+          setStoreId(data.storeId)
+        }
       } else {
         toast.error("Error al cargar pedidos", { description: data.error })
       }
@@ -139,7 +143,7 @@ export default function StorePortalPage() {
     eventSource.onmessage = (event) => {
       try {
         const { type, data } = JSON.parse(event.data)
-        if (type === "new_order" && state.user?.storeId === data.storeId) {
+        if (type === "new_order" && storeId === data.storeId) {
           fetchOrders(false)
           toast.info("¡Nuevo pedido recibido! 🔔", { duration: 4000 })
         } else if (type === "order_updated") {
@@ -157,7 +161,7 @@ export default function StorePortalPage() {
     return () => {
       eventSource.close()
     }
-  }, [fetchOrders, state.user?.storeId])
+  }, [fetchOrders, storeId])
 
   // Fetch products when activeTab switches to products
   useEffect(() => {
