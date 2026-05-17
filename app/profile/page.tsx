@@ -70,9 +70,14 @@ export default function ProfilePage() {
   const { state, dispatch, cartCount } = useApp()
   const [activeNav] = useState("profile")
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch (e) {
+      console.error(e)
+    }
     dispatch({ type: "LOGOUT" })
-    window.location.replace("/login")
+    router.push("/login")
   }
 
   // TODO: replace with API call (fetch user profile)
