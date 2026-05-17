@@ -78,6 +78,40 @@ export default function StorePortalPage() {
   const [showProductModal, setShowProductModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [storeId, setStoreId] = useState<string | null>(null)
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false)
+  const [customCategories, setCustomCategories] = useState<string[]>([])
+  const [newCatName, setNewCatName] = useState("")
+
+  // Load custom categories on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("uade-eats-custom-categories")
+    if (stored) {
+      try {
+        setCustomCategories(JSON.parse(stored))
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  }, [])
+
+  const DEFAULT_CATEGORIES = [
+    "Menú del día",
+    "Platos",
+    "Plato principal",
+    "Platos principales",
+    "Salad bar",
+    "Postre",
+    "Cafetería",
+    "Bebidas",
+    "Budines y Scons",
+    "Snacks"
+  ]
+
+  const allCategories = Array.from(new Set([
+    ...DEFAULT_CATEGORIES,
+    ...customCategories,
+    ...products.map(p => p.category).filter(Boolean)
+  ])).sort()
 
   // Product Form State
   const [prodName, setProdName] = useState("")
@@ -210,7 +244,7 @@ export default function StorePortalPage() {
       setEditingProduct(null)
       setProdName("")
       setProdPrice("")
-      setProdCategory("Menú")
+      setProdCategory("Menú del día")
       setProdDescription("")
       setProdImageUrl("")
     }
@@ -725,13 +759,22 @@ export default function StorePortalPage() {
                   <h2 className="text-base font-black text-[#1C1917]">Carta del Local</h2>
                   <p className="text-xs text-muted-foreground font-medium mt-0.5">Edita y actualiza los platos de tu catálogo</p>
                 </div>
-                <button
-                  onClick={() => handleOpenProductModal(null)}
-                  className="bg-[#F97316] hover:bg-[#EA580C] text-white text-xs font-bold py-2.5 px-4 rounded-2xl flex items-center gap-1.5 shadow-md active:scale-95 transition-transform"
-                >
-                  <Plus size={14} />
-                  Agregar Plato
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowCategoriesModal(true)}
+                    className="bg-[#F9F5F0] hover:bg-[#F3E8FF] border border-[#E5E7EB] text-[#1C1917] text-xs font-bold py-2.5 px-4 rounded-2xl flex items-center gap-1.5 active:scale-95 transition-transform"
+                  >
+                    <FolderOpen size={14} className="text-[#F97316]" />
+                    Categorías
+                  </button>
+                  <button
+                    onClick={() => handleOpenProductModal(null)}
+                    className="bg-[#F97316] hover:bg-[#EA580C] text-white text-xs font-bold py-2.5 px-4 rounded-2xl flex items-center gap-1.5 shadow-md active:scale-95 transition-transform"
+                  >
+                    <Plus size={14} />
+                    Agregar Plato
+                  </button>
+                </div>
               </div>
 
               {productsLoading ? (
@@ -875,23 +918,40 @@ export default function StorePortalPage() {
 
                 {/* Product Category */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#1C1917]">Categoría *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#1C1917]">Categoría *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = prompt("Ingresa el nombre de la nueva categoría:")
+                        if (!name) return
+                        const trimmed = name.trim()
+                        if (!trimmed) return
+                        if (allCategories.includes(trimmed)) {
+                          setProdCategory(trimmed)
+                          return
+                        }
+                        const updated = [...customCategories, trimmed]
+                        setCustomCategories(updated)
+                        localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+                        setProdCategory(trimmed)
+                        toast.success(`Categoría "${trimmed}" creada y seleccionada 🎉`)
+                      }}
+                      className="text-[10px] text-[#F97316] hover:text-[#EA580C] font-bold transition-colors"
+                    >
+                      + Crear nueva
+                    </button>
+                  </div>
                   <select
                     required
                     value={prodCategory}
                     onChange={(e) => setProdCategory(e.target.value)}
                     className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
                   >
-                    <option value="Menú del día">Menú del día</option>
-                    <option value="Platos">Platos</option>
-                    <option value="Plato principal">Plato principal</option>
-                    <option value="Platos principales">Platos principales</option>
-                    <option value="Salad bar">Salad bar</option>
-                    <option value="Postre">Postre</option>
-                    <option value="Cafetería">Cafetería</option>
-                    <option value="Bebidas">Bebidas</option>
-                    <option value="Budines y Scons">Budines y Scons</option>
-                    <option value="Snacks">Snacks</option>
+                    <option value="">Selecciona una categoría...</option>
+                    {allCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1004,6 +1064,160 @@ export default function StorePortalPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- CATEGORIES MODAL --- */}
+      {showCategoriesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-[440px] bg-white rounded-3xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-8 duration-200">
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-[#F3F4F6] flex items-center justify-between">
+              <div>
+                <h3 className="font-black text-[#1C1917] text-base leading-none">Gestionar Categorías</h3>
+                <p className="text-xs text-muted-foreground mt-1">Agrega, edita o elimina las categorías de tu menú</p>
+              </div>
+              <button
+                onClick={() => setShowCategoriesModal(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-[#F3F4F6] text-muted-foreground hover:text-foreground hover:bg-[#E5E7EB] transition-colors"
+              >
+                <XCircle size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Add New Category */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nueva categoría..."
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="flex-1 rounded-2xl border border-border bg-card px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+                />
+                <button
+                  onClick={() => {
+                    const name = newCatName.trim()
+                    if (!name) return
+                    if (allCategories.includes(name)) {
+                      toast.error("La categoría ya existe")
+                      return
+                    }
+                    const updated = [...customCategories, name]
+                    setCustomCategories(updated)
+                    localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+                    setNewCatName("")
+                    toast.success("Categoría agregada")
+                  }}
+                  className="bg-[#F97316] hover:bg-[#EA580C] text-white text-xs font-bold py-2.5 px-4 rounded-2xl transition-colors active:scale-95 shrink-0"
+                >
+                  Agregar
+                </button>
+              </div>
+
+              {/* List of active categories */}
+              <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
+                {allCategories.map((cat) => {
+                  const prodCount = products.filter(p => p.category === cat).length
+                  return (
+                    <div
+                      key={cat}
+                      className="flex items-center justify-between p-3 rounded-2xl border border-[#F3F4F6] bg-[#F9F5F0] hover:bg-[#F3E8FF]/30 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[#1C1917] text-xs">{cat}</span>
+                        <span className="text-[10px] bg-white text-muted-foreground border px-2 py-0.5 rounded-full font-bold">
+                          {prodCount} {prodCount === 1 ? "plato" : "platos"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {/* Rename */}
+                        <button
+                          onClick={async () => {
+                            const newName = prompt(`Ingresa el nuevo nombre para la categoría "${cat}":`, cat)
+                            if (!newName || newName.trim() === cat) return
+                            
+                            const load = toast.loading("Renombrando categoría...")
+                            try {
+                              const res = await fetch("/api/store-portal/categories", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  action: "rename",
+                                  oldCategory: cat,
+                                  newCategory: newName.trim()
+                                })
+                              })
+                              const data = await res.json()
+                              if (data.success) {
+                                let updated = customCategories.map(c => c === cat ? newName.trim() : c)
+                                if (updated.indexOf(newName.trim()) === -1 && customCategories.includes(cat)) {
+                                  updated.push(newName.trim())
+                                }
+                                updated = updated.filter(c => c !== cat)
+                                setCustomCategories(updated)
+                                localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+
+                                toast.success("Categoría renombrada con éxito 🎉", { id: load })
+                                fetchProducts() // refresh local list
+                              } else {
+                                toast.error(data.error, { id: load })
+                              }
+                            } catch (e) {
+                              console.error(e)
+                              toast.error("Error de red", { id: load })
+                            }
+                          }}
+                          className="p-1.5 hover:bg-white rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          title="Renombrar categoría"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+
+                        {/* Delete / Reset */}
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`¿Estás seguro de eliminar la categoría "${cat}"? Los platos asociados pasarán a llamarse "Sin categoría".`)) return
+                            
+                            const load = toast.loading("Eliminando categoría...")
+                            try {
+                              const res = await fetch("/api/store-portal/categories", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  action: "delete",
+                                  oldCategory: cat
+                                })
+                              })
+                              const data = await res.json()
+                              if (data.success) {
+                                const updated = customCategories.filter(c => c !== cat)
+                                setCustomCategories(updated)
+                                localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+
+                                toast.success("Categoría eliminada", { id: load })
+                                fetchProducts() // refresh list
+                              } else {
+                                toast.error(data.error, { id: load })
+                              }
+                            } catch (e) {
+                              console.error(e)
+                              toast.error("Error de red", { id: load })
+                            }
+                          }}
+                          className="p-1.5 hover:bg-white rounded-lg text-red-500 hover:text-red-700 transition-colors"
+                          title="Eliminar categoría"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}
