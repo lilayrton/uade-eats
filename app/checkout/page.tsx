@@ -98,7 +98,7 @@ function StepIndicator({ step }: { step: 1 | 2 }) {
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const [step, setStep] = useState<1 | 2>(1)
   const [selectedPayment, setSelectedPayment] = useState<PaymentId>("efectivo")
   const [isProcessing, setIsProcessing] = useState(false)
