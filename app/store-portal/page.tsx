@@ -81,6 +81,11 @@ export default function StorePortalPage() {
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [newCatName, setNewCatName] = useState("")
+  const [renamingCat, setRenamingCat] = useState<string | null>(null)
+  const [renameInputVal, setRenameInputVal] = useState("")
+  const [deletingCat, setDeletingCat] = useState<string | null>(null)
+  const [showNewCatInput, setShowNewCatInput] = useState(false)
+  const [newCatInputVal, setNewCatInputVal] = useState("")
 
   // Load custom categories on mount
   useEffect(() => {
@@ -233,6 +238,8 @@ export default function StorePortalPage() {
 
   // --- Product CRUD Actions ---
   const handleOpenProductModal = (product: Product | null = null) => {
+    setShowNewCatInput(false)
+    setNewCatInputVal("")
     if (product) {
       setEditingProduct(product)
       setProdName(product.name)
@@ -920,39 +927,75 @@ export default function StorePortalPage() {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-[#1C1917]">Categoría *</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const name = prompt("Ingresa el nombre de la nueva categoría:")
-                        if (!name) return
-                        const trimmed = name.trim()
-                        if (!trimmed) return
-                        if (allCategories.includes(trimmed)) {
-                          setProdCategory(trimmed)
-                          return
-                        }
-                        const updated = [...customCategories, trimmed]
-                        setCustomCategories(updated)
-                        localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
-                        setProdCategory(trimmed)
-                        toast.success(`Categoría "${trimmed}" creada y seleccionada 🎉`)
-                      }}
-                      className="text-[10px] text-[#F97316] hover:text-[#EA580C] font-bold transition-colors"
-                    >
-                      + Crear nueva
-                    </button>
+                    {!showNewCatInput ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowNewCatInput(true)}
+                        className="text-[10px] text-[#F97316] hover:text-[#EA580C] font-bold transition-colors"
+                      >
+                        + Crear nueva
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNewCatInput(false)
+                          setNewCatInputVal("")
+                        }}
+                        className="text-[10px] text-muted-foreground hover:text-foreground font-bold transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    )}
                   </div>
-                  <select
-                    required
-                    value={prodCategory}
-                    onChange={(e) => setProdCategory(e.target.value)}
-                    className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
-                  >
-                    <option value="">Selecciona una categoría...</option>
-                    {allCategories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                  
+                  {showNewCatInput ? (
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="Nueva categoría..."
+                        value={newCatInputVal}
+                        onChange={(e) => setNewCatInputVal(e.target.value)}
+                        className="flex-1 rounded-2xl border border-border bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = newCatInputVal.trim()
+                          if (!val) return
+                          if (allCategories.includes(val)) {
+                            setProdCategory(val)
+                            setShowNewCatInput(false)
+                            setNewCatInputVal("")
+                            return
+                          }
+                          const updated = [...customCategories, val]
+                          setCustomCategories(updated)
+                          localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+                          setProdCategory(val)
+                          setShowNewCatInput(false)
+                          setNewCatInputVal("")
+                          toast.success(`Categoría "${val}" creada y seleccionada 🎉`)
+                        }}
+                        className="bg-[#F97316] hover:bg-[#EA580C] text-white text-xs font-bold px-3 py-2 rounded-2xl transition-colors active:scale-95 shrink-0"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={prodCategory}
+                      onChange={(e) => setProdCategory(e.target.value)}
+                      className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+                    >
+                      <option value="">Selecciona una categoría...</option>
+                      {allCategories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -1120,99 +1163,155 @@ export default function StorePortalPage() {
               <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
                 {allCategories.map((cat) => {
                   const prodCount = products.filter(p => p.category === cat).length
+                  const isRenaming = renamingCat === cat
+                  const isDeleting = deletingCat === cat
+
                   return (
                     <div
                       key={cat}
-                      className="flex items-center justify-between p-3 rounded-2xl border border-[#F3F4F6] bg-[#F9F5F0] hover:bg-[#F3E8FF]/30 transition-colors"
+                      className="flex items-center justify-between p-3 rounded-2xl border border-[#F3F4F6] bg-[#F9F5F0] hover:bg-[#F3E8FF]/30 transition-all duration-200"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-[#1C1917] text-xs">{cat}</span>
-                        <span className="text-[10px] bg-white text-muted-foreground border px-2 py-0.5 rounded-full font-bold">
-                          {prodCount} {prodCount === 1 ? "plato" : "platos"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        {/* Rename */}
-                        <button
-                          onClick={async () => {
-                            const newName = prompt(`Ingresa el nuevo nombre para la categoría "${cat}":`, cat)
-                            if (!newName || newName.trim() === cat) return
-                            
-                            const load = toast.loading("Renombrando categoría...")
-                            try {
-                              const res = await fetch("/api/store-portal/categories", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  action: "rename",
-                                  oldCategory: cat,
-                                  newCategory: newName.trim()
+                      {isRenaming ? (
+                        <div className="flex-1 flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={renameInputVal}
+                            onChange={(e) => setRenameInputVal(e.target.value)}
+                            className="flex-1 rounded-xl border border-border bg-white px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+                            autoFocus
+                          />
+                          <button
+                            onClick={async () => {
+                              const val = renameInputVal.trim()
+                              if (!val || val === cat) {
+                                setRenamingCat(null)
+                                return
+                              }
+                              const load = toast.loading("Renombrando categoría...")
+                              try {
+                                const res = await fetch("/api/store-portal/categories", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    action: "rename",
+                                    oldCategory: cat,
+                                    newCategory: val
+                                  })
                                 })
-                              })
-                              const data = await res.json()
-                              if (data.success) {
-                                let updated = customCategories.map(c => c === cat ? newName.trim() : c)
-                                if (updated.indexOf(newName.trim()) === -1 && customCategories.includes(cat)) {
-                                  updated.push(newName.trim())
+                                const data = await res.json()
+                                if (data.success) {
+                                  let updated = customCategories.map(c => c === cat ? val : c)
+                                  if (updated.indexOf(val) === -1 && customCategories.includes(cat)) {
+                                    updated.push(val)
+                                  }
+                                  updated = updated.filter(c => c !== cat)
+                                  setCustomCategories(updated)
+                                  localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+
+                                  toast.success("Categoría renombrada con éxito 🎉", { id: load })
+                                  fetchProducts()
+                                  setRenamingCat(null)
+                                } else {
+                                  toast.error(data.error, { id: load })
                                 }
-                                updated = updated.filter(c => c !== cat)
-                                setCustomCategories(updated)
-                                localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
-
-                                toast.success("Categoría renombrada con éxito 🎉", { id: load })
-                                fetchProducts() // refresh local list
-                              } else {
-                                toast.error(data.error, { id: load })
+                              } catch (e) {
+                                console.error(e)
+                                toast.error("Error de red", { id: load })
                               }
-                            } catch (e) {
-                              console.error(e)
-                              toast.error("Error de red", { id: load })
-                            }
-                          }}
-                          className="p-1.5 hover:bg-white rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                          title="Renombrar categoría"
-                        >
-                          <Edit2 size={12} />
-                        </button>
+                            }}
+                            className="p-1.5 bg-[#F97316] text-white hover:bg-[#EA580C] rounded-lg transition-colors active:scale-95"
+                            title="Guardar"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button
+                            onClick={() => setRenamingCat(null)}
+                            className="p-1.5 bg-[#F3F4F6] text-muted-foreground hover:bg-[#E5E7EB] rounded-lg transition-colors"
+                            title="Cancelar"
+                          >
+                            <XCircle size={12} />
+                          </button>
+                        </div>
+                      ) : isDeleting ? (
+                        <div className="flex-1 flex items-center justify-between gap-2 bg-red-50/50 p-1.5 rounded-xl animate-in fade-in duration-200">
+                          <span className="text-[10px] text-red-600 font-bold leading-tight">¿Reasignar platos a "Sin categoría"?</span>
+                          <div className="flex gap-1 shrink-0">
+                            <button
+                              onClick={async () => {
+                                const load = toast.loading("Eliminando categoría...")
+                                try {
+                                  const res = await fetch("/api/store-portal/categories", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                      action: "delete",
+                                      oldCategory: cat
+                                    })
+                                  })
+                                  const data = await res.json()
+                                  if (data.success) {
+                                    const updated = customCategories.filter(c => c !== cat)
+                                    setCustomCategories(updated)
+                                    localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
 
-                        {/* Delete / Reset */}
-                        <button
-                          onClick={async () => {
-                            if (!confirm(`¿Estás seguro de eliminar la categoría "${cat}"? Los platos asociados pasarán a llamarse "Sin categoría".`)) return
-                            
-                            const load = toast.loading("Eliminando categoría...")
-                            try {
-                              const res = await fetch("/api/store-portal/categories", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  action: "delete",
-                                  oldCategory: cat
-                                })
-                              })
-                              const data = await res.json()
-                              if (data.success) {
-                                const updated = customCategories.filter(c => c !== cat)
-                                setCustomCategories(updated)
-                                localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+                                    toast.success("Categoría eliminada", { id: load })
+                                    fetchProducts()
+                                    setDeletingCat(null)
+                                  } else {
+                                    toast.error(data.error, { id: load })
+                                  }
+                                } catch (e) {
+                                  console.error(e)
+                                  toast.error("Error de red", { id: load })
+                                }
+                              }}
+                              className="px-2 py-1 bg-red-500 text-white rounded-lg text-[9px] font-bold hover:bg-red-600 transition-colors"
+                            >
+                              Sí, borrar
+                            </button>
+                            <button
+                              onClick={() => setDeletingCat(null)}
+                              className="px-2 py-1 bg-[#F3F4F6] text-muted-foreground rounded-lg text-[9px] font-bold hover:bg-[#E5E7EB] transition-colors"
+                            >
+                              No
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[#1C1917] text-xs">{cat}</span>
+                            <span className="text-[10px] bg-white text-muted-foreground border px-2 py-0.5 rounded-full font-bold">
+                              {prodCount} {prodCount === 1 ? "plato" : "platos"}
+                            </span>
+                          </div>
 
-                                toast.success("Categoría eliminada", { id: load })
-                                fetchProducts() // refresh list
-                              } else {
-                                toast.error(data.error, { id: load })
-                              }
-                            } catch (e) {
-                              console.error(e)
-                              toast.error("Error de red", { id: load })
-                            }
-                          }}
-                          className="p-1.5 hover:bg-white rounded-lg text-red-500 hover:text-red-700 transition-colors"
-                          title="Eliminar categoría"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
+                          <div className="flex items-center gap-1.5">
+                            {/* Rename */}
+                            <button
+                              onClick={() => {
+                                setRenamingCat(cat)
+                                setRenameInputVal(cat)
+                              }}
+                              className="p-1.5 hover:bg-white rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                              title="Renombrar categoría"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+
+                            {/* Delete / Reset */}
+                            <button
+                              onClick={() => {
+                                setDeletingCat(cat)
+                              }}
+                              className="p-1.5 hover:bg-white rounded-lg text-red-500 hover:text-red-700 transition-colors"
+                              title="Eliminar categoría"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )
                 })}
