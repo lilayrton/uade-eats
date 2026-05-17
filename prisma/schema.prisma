@@ -13,6 +13,8 @@ model User {
   email        String   @unique
   passwordHash String
   role         String   @default("student")
+  storeId      String?
+  store        Store?   @relation(fields: [storeId], references: [id])
   createdAt    DateTime @default(now())
   orders       Order[]
 }
@@ -29,6 +31,7 @@ model Store {
   createdAt            DateTime  @default(now())
   products             Product[]
   orders               Order[]
+  users                User[]
 }
 
 model Product {

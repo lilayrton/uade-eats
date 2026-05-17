@@ -6,11 +6,23 @@ import { cookies } from "next/headers"
 
 export async function POST(req: Request) {
   try {
-    const { nombre, email, password } = await req.json()
+    const { nombre, email, password, role = "student", storeId } = await req.json()
 
-    if (!email || !email.endsWith("@uade.edu.ar")) {
-      return NextResponse.json({ error: "Email must be @uade.edu.ar" }, { status: 400 })
+    if (role === "student") {
+      if (!email || !email.endsWith("@uade.edu.ar")) {
+        return NextResponse.json({ error: "Solo podés registrarte con un mail @uade.edu.ar" }, { status: 400 })
+      }
+    } else if (role === "store_owner") {
+      if (!email) {
+        return NextResponse.json({ error: "Email es requerido" }, { status: 400 })
+      }
+      if (!storeId) {
+        return NextResponse.json({ error: "Debés seleccionar un local o comedor" }, { status: 400 })
+      }
+    } else {
+      return NextResponse.json({ error: "Rol no válido" }, { status: 400 })
     }
+
     if (!password || password.length < 8) {
       return NextResponse.json({ error: "La contraseña debe tener al menos 8 caracteres" }, { status: 400 })
     }
@@ -20,7 +32,7 @@ export async function POST(req: Request) {
 
     const existingUser = await db.user.findUnique({ where: { email } })
     if (existingUser) {
-      return NextResponse.json({ error: "Email already in use" }, { status: 400 })
+      return NextResponse.json({ error: "El email ya está registrado" }, { status: 400 })
     }
 
     const passwordHash = await bcrypt.hash(password, 10)
@@ -30,6 +42,8 @@ export async function POST(req: Request) {
         name: nombre,
         email,
         passwordHash,
+        role,
+        storeId: role === "store_owner" ? storeId : null
       },
     })
 

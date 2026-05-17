@@ -11,6 +11,7 @@ import {
   HelpCircle,
   Flag,
   LogOut,
+  Store,
 } from "lucide-react"
 import { BottomNav } from "@/components/bottom-nav"
 import { cn } from "@/lib/utils"
@@ -123,6 +124,32 @@ export default function ProfilePage() {
               <ChevronRight size={16} className="text-muted-foreground" />
             </button>
           </div>
+
+          {/* Diner Owner Panel Quick Action */}
+          {user?.role === "store_owner" && (
+            <div className="rounded-2xl border border-[#F97316]/30 bg-[#FFF7ED] p-4 flex flex-col gap-3 animate-in fade-in duration-200">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-black text-sm text-[#F97316] uppercase tracking-wider">
+                    Portal del Comedor
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Administrá los pedidos, cambiá los estados y gestioná las ventas de tu local en tiempo real.
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#F97316]/10 text-[#F97316] shrink-0">
+                  <Store size={20} />
+                </div>
+              </div>
+              <button
+                onClick={() => router.push("/store-portal")}
+                className="w-full py-2.5 rounded-xl font-bold text-white text-xs text-center hover:opacity-90 active:scale-[0.98] transition-transform duration-150 shadow-sm"
+                style={{ backgroundColor: "#F97316" }}
+              >
+                Abrir panel administrativo
+              </button>
+            </div>
+          )}
 
           {/* Settings groups */}
           {SETTINGS.map((group) => {
