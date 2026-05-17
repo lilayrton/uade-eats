@@ -45,9 +45,9 @@ export default function StorePageClient({ storeData, storeProducts }: StorePageC
 
   const handleAdd = useCallback(
     (product: Product) => {
-      dispatch({ type: "ADD_TO_CART", payload: { product, storeId: storeData.id } })
+      dispatch({ type: "ADD_TO_CART", payload: { product, storeId: storeData.id, storeName: storeData.name } })
     },
-    [dispatch, storeData.id]
+    [dispatch, storeData.id, storeData.name]
   )
 
   const handleRemove = useCallback(

@@ -29,19 +29,16 @@ interface AppState {
   user: User | null
   cart: {
     storeId: string | null
+    storeName: string | null
     items: CartItem[]
   }
-  orders: Order[]
-  activeOrderId: string | null
   notifications: Notification[]
 }
 
 const initialState: AppState = {
   authStatus: "unauthenticated",
   user: null,
-  cart: { storeId: null, items: [] },
-  orders: [],
-  activeOrderId: null,
+  cart: { storeId: null, storeName: null, items: [] },
   notifications: [
     {
       id: "n1",
@@ -79,13 +76,10 @@ type AppAction =
   | { type: "CLEAR_USER" }
   | { type: "LOGIN"; payload: User }
   | { type: "LOGOUT" }
-  | { type: "ADD_TO_CART"; payload: { product: Product; storeId: string } }
+  | { type: "ADD_TO_CART"; payload: { product: Product; storeId: string; storeName: string } }
   | { type: "REMOVE_FROM_CART"; payload: { productId: string } }
   | { type: "UPDATE_QUANTITY"; payload: { productId: string; quantity: number } }
   | { type: "CLEAR_CART" }
-  | { type: "PLACE_ORDER"; payload: { storeName: string; paymentMethod: PaymentMethod } }
-  | { type: "UPDATE_ORDER_STATUS"; payload: { orderId: string; status: OrderStatus } }
-  | { type: "SET_ACTIVE_ORDER"; payload: { orderId: string | null } }
   | { type: "REGISTER"; payload: { user: User } }
   | { type: "RESTORE_SESSION"; payload: User }
   | { type: "MARK_NOTIFICATION_READ"; payload: { id: string } }
@@ -120,12 +114,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         user: null,
         authStatus: "unauthenticated",
-        cart: { storeId: null, items: [] },
-        activeOrderId: null,
+        cart: { storeId: null, storeName: null, items: [] },
       }
 
     case "ADD_TO_CART": {
-      const { product, storeId } = action.payload
+      const { product, storeId, storeName } = action.payload
       let items = state.cart.items
 
       // If adding from a different store, warn and reset cart
@@ -153,7 +146,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
       return {
         ...state,
-        cart: { storeId, items: updatedItems },
+        cart: { storeId, storeName, items: updatedItems },
       }
     }
 
@@ -165,6 +158,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         cart: {
           storeId: updatedItems.length === 0 ? null : state.cart.storeId,
+          storeName: updatedItems.length === 0 ? null : state.cart.storeName,
           items: updatedItems,
         },
       }
@@ -181,6 +175,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
           ...state,
           cart: {
             storeId: updatedItems.length === 0 ? null : state.cart.storeId,
+            storeName: updatedItems.length === 0 ? null : state.cart.storeName,
             items: updatedItems,
           },
         }
@@ -197,45 +192,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case "CLEAR_CART":
-      return { ...state, cart: { storeId: null, items: [] } }
-
-    case "PLACE_ORDER": {
-      const { storeName, paymentMethod: _paymentMethod } = action.payload
-      const total = state.cart.items.reduce(
-        (sum, item) => sum + item.quantity * item.product.price,
-        0
-      )
-      const pickupCode = Math.floor(Math.random() * 90) + 10
-      const newOrder: Order = {
-        id: `order-${Date.now()}`,
-        storeId: state.cart.storeId ?? "",
-        storeName,
-        items: state.cart.items,
-        total,
-        status: "pending",
-        pickupCode,
-        createdAt: Date.now(),
-      }
-      return {
-        ...state,
-        orders: [...state.orders, newOrder],
-        activeOrderId: newOrder.id,
-        cart: { storeId: null, items: [] },
-      }
-    }
-
-    case "UPDATE_ORDER_STATUS":
-      return {
-        ...state,
-        orders: state.orders.map((o) =>
-          o.id === action.payload.orderId
-            ? { ...o, status: action.payload.status }
-            : o
-        ),
-      }
-
-    case "SET_ACTIVE_ORDER":
-      return { ...state, activeOrderId: action.payload.orderId }
+      return { ...state, cart: { storeId: null, storeName: null, items: [] } }
 
     case "MARK_NOTIFICATION_READ":
       return {

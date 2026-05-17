@@ -1,29 +1,26 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, ChevronRight, Clock, MapPin, CheckCircle2, Loader2 } from "lucide-react"
+import { Bell, ChevronRight, MapPin, CheckCircle2, Loader2, Store } from "lucide-react"
 import { BottomNav } from "@/components/bottom-nav"
 import { cn } from "@/lib/utils"
-import type { Order, OrderStatus } from "@/lib/types"
-// TODO: replace with API call
-import { MOCK_STORES } from "@/lib/mock-data"
 import { useApp } from "@/context/AppContext"
 
 const STEPS = ["Recibido", "En preparación", "Listo"]
 
-function stepIndex(status: OrderStatus): number {
+function stepIndex(status: string): number {
   if (status === "pending") return 0
   if (status === "preparing") return 1
   if (status === "ready") return 2
   return 0
 }
 
-function formatTime(ts: number): string {
+function formatTime(ts: string | number): string {
   return new Date(ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
 }
 
-function formatDate(ts: number): string {
+function formatDate(ts: string | number): string {
   return new Date(ts).toLocaleDateString("es-AR", {
     day: "numeric",
     month: "short",
@@ -34,14 +31,30 @@ function formatDate(ts: number): string {
 
 export default function OrdersPage() {
   const router = useRouter()
-  const { state, cartCount } = useApp()
+  const { cartCount } = useApp()
   const [activeNav] = useState("orders")
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // TODO: replace with API call (fetch orders for current user)
-  const activeOrders: Order[] = state.orders.filter((o) =>
+  useEffect(() => {
+    fetch("/api/orders")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setOrders(data.orders)
+        }
+        setLoading(false)
+      })
+      .catch(e => {
+        console.error(e)
+        setLoading(false)
+      })
+  }, [])
+
+  const activeOrders = orders.filter((o) =>
     o.status === "pending" || o.status === "preparing" || o.status === "ready"
   )
-  const pastOrders: Order[] = state.orders.filter((o) => o.status === "completed")
+  const pastOrders = orders.filter((o) => o.status === "completed" || o.status === "cancelled")
 
   return (
     <div className="min-h-svh flex flex-col items-center" style={{ backgroundColor: "var(--brand-surface)" }}>
@@ -68,7 +81,11 @@ export default function OrdersPage() {
           {/* Active orders */}
           <section>
             <h2 className="text-base font-bold text-foreground mb-3">Pedidos activos</h2>
-            {activeOrders.length === 0 ? (
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 size={24} className="animate-spin text-muted-foreground" />
+              </div>
+            ) : activeOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center rounded-2xl bg-card border border-border/60">
                 <span className="text-4xl mb-3">🛵</span>
                 <p className="font-semibold text-foreground text-sm">Sin pedidos activos</p>
@@ -79,10 +96,9 @@ export default function OrdersPage() {
                 {activeOrders.map((order) => {
                   const step = stepIndex(order.status)
                   const isReady = order.status === "ready"
-                  const storeCategory =
-                    MOCK_STORES.find((s) => s.id === order.storeId)?.category ?? ""
+                  const storeCategory = order.store.category ?? ""
                   const itemsLabel = order.items
-                    .map((i) => `${i.product.name} × ${i.quantity}`)
+                    .map((i: any) => `${i.product.name} × ${i.quantity}`)
                     .join(", ")
 
                   return (
@@ -116,7 +132,7 @@ export default function OrdersPage() {
                         {/* Store + items */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm text-foreground">{order.storeName}</p>
+                            <p className="font-bold text-sm text-foreground">{order.store.name}</p>
                             <p className="text-xs text-muted-foreground mt-0.5 truncate">{itemsLabel}</p>
                           </div>
                           <span
@@ -204,7 +220,7 @@ export default function OrdersPage() {
           {/* Order history */}
           <section>
             <h2 className="text-base font-bold text-foreground mb-3">Historial</h2>
-            {pastOrders.length === 0 ? (
+            {loading ? null : pastOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <span className="text-4xl mb-3">📋</span>
                 <p className="font-semibold text-foreground text-sm">Sin pedidos anteriores</p>
@@ -213,7 +229,7 @@ export default function OrdersPage() {
               <div className="space-y-2">
                 {pastOrders.map((order) => {
                   const itemsLabel = order.items
-                    .map((i) => `${i.product.name} × ${i.quantity}`)
+                    .map((i: any) => `${i.product.name} × ${i.quantity}`)
                     .join(", ")
                   return (
                     <button
@@ -225,14 +241,14 @@ export default function OrdersPage() {
                         className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
                         style={{ backgroundColor: "#FFF0E6" }}
                       >
-                        🧇
+                        <Store size={20} color="#F97316" />
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="font-bold text-sm text-foreground truncate">{order.storeName}</p>
+                          <p className="font-bold text-sm text-foreground truncate">{order.store.name}</p>
                           <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
-                            Completado
+                            {order.status === "completed" ? "Completado" : "Cancelado"}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5 truncate">{itemsLabel}</p>

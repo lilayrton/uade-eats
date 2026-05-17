@@ -17,9 +17,7 @@ export default function CartPage() {
   const [activeNav, setActiveNav] = useState("cart")
 
   const cartItems = state.cart.items
-  const storeName = state.cart.storeId
-    ? (MOCK_STORES.find((s) => s.id === state.cart.storeId)?.name ?? "")
-    : ""
+  const storeName = state.cart.storeName ?? ""
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.quantity * item.product.price,
     0
@@ -29,7 +27,7 @@ export default function CartPage() {
   const handleAdd = useCallback(
     (product: Product) => {
       if (!state.cart.storeId) return
-      dispatch({ type: "ADD_TO_CART", payload: { product, storeId: state.cart.storeId } })
+      dispatch({ type: "ADD_TO_CART", payload: { product, storeId: state.cart.storeId, storeName: state.cart.storeName ?? "" } })
     },
     [dispatch, state.cart.storeId]
   )
@@ -55,10 +53,6 @@ export default function CartPage() {
   )
 
   const handleConfirm = () => {
-    dispatch({
-      type: "PLACE_ORDER",
-      payload: { storeName, paymentMethod: "efectivo" },
-    })
     router.push("/checkout")
   }
 

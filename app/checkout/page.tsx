@@ -104,23 +104,20 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [activeNav, setActiveNav] = useState("cart")
 
-  // TODO: replace with API call (fetch order by activeOrderId)
-  const activeOrder = state.activeOrderId
-    ? state.orders.find((o) => o.id === state.activeOrderId) ?? null
-    : null
+  const cart = state.cart
+  const storeName = cart.storeName ?? "UADE Eats"
 
-  // Guard: if no active order, redirect to cart
   useEffect(() => {
-    if (!activeOrder) {
+    if (cart.items.length === 0) {
       router.replace("/cart")
     }
-  }, [activeOrder, router])
+  }, [cart.items.length, router])
 
-  if (!activeOrder) return null
+  if (cart.items.length === 0) return null
 
-  const total = activeOrder.total
+  const total = cart.items.reduce((sum, item) => sum + item.quantity * item.product.price, 0)
 
-  const orderItems = activeOrder.items.map((ci) => ({
+  const orderItems = cart.items.map((ci) => ({
     id: ci.product.id,
     name: ci.product.name,
     quantity: ci.quantity,
@@ -136,17 +133,38 @@ export default function CheckoutPage() {
     setStep(2)
   }, [])
 
-  const handlePay = useCallback(() => {
+  const handlePay = useCallback(async () => {
     if (isProcessing) return
     setIsProcessing(true)
-    setTimeout(() => {
-      router.push("/orders")
-      toast.success("¡Pedido confirmado!", {
-        description: `Tu pedido fue recibido por ${activeOrder.storeName}`,
-        duration: 4000,
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId: cart.storeId,
+          items: cart.items.map(item => ({ productId: item.product.id, quantity: item.quantity })),
+          paymentMethod: selectedPayment
+        })
       })
-    }, 1500)
-  }, [isProcessing, router, activeOrder.storeName])
+
+      const data = await res.json()
+      if (data.success) {
+        dispatch({ type: "CLEAR_CART" })
+        router.push("/orders")
+        toast.success("¡Pedido confirmado!", {
+          description: `Tu pedido fue recibido por ${storeName}`,
+          duration: 4000,
+        })
+      } else {
+        toast.error("Error al confirmar el pedido", { description: data.error })
+        setIsProcessing(false)
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error("Error de conexión", { description: "Revisá tu internet e intentá de nuevo." })
+      setIsProcessing(false)
+    }
+  }, [isProcessing, router, storeName, cart, selectedPayment, dispatch])
 
   const stepTitle = step === 1 ? "Resumen del pedido" : "Método de pago"
 
@@ -181,7 +199,7 @@ export default function CheckoutPage() {
         >
           {step === 1 ? (
             <Step1Content
-              storeName={activeOrder.storeName}
+              storeName={storeName}
               items={orderItems}
               subtotal={total}
               total={total}
