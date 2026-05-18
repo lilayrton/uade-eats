@@ -156,8 +156,12 @@ export default function CheckoutPage() {
         if (selectedPayment === "mercadopago" && data.initPoint) {
           const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
           if (isLocalhost) {
-            // Open real Mercado Pago in a new tab for sandbox simulation
-            window.open(data.initPoint, "_blank")
+            // Open real Mercado Pago in a new tab for sandbox simulation safely
+            try {
+              window.open(data.initPoint, "_blank")
+            } catch (err) {
+              console.error("Popup blocked by browser:", err)
+            }
             // Instantly transition main tab to local success flow to trigger SSE & clean experience
             router.push(`/checkout/success?orderId=${data.order.id}`)
             toast.success("¡Pedido creado! Abriendo Mercado Pago en nueva pestaña...")

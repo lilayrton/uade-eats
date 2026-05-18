@@ -77,7 +77,7 @@ export default function OrdersPage() {
   }, [fetchOrders])
 
   const activeOrders = orders.filter((o) =>
-    o.status === "pending" || o.status === "preparing" || o.status === "ready"
+    o.status === "pending" || o.status === "preparing" || o.status === "ready" || o.status === "pending_payment"
   )
   const pastOrders = orders.filter((o) => o.status === "completed" || o.status === "cancelled")
 
@@ -119,6 +119,7 @@ export default function OrdersPage() {
             ) : (
               <div className="space-y-3">
                 {activeOrders.map((order) => {
+                  const isPendingPayment = order.status === "pending_payment"
                   const step = stepIndex(order.status)
                   const isReady = order.status === "ready"
                   const storeCategory = order.store.category ?? ""
@@ -134,9 +135,11 @@ export default function OrdersPage() {
                       {/* Status bar */}
                       <div
                         className="px-4 py-2.5 flex items-center gap-2"
-                        style={{ backgroundColor: isReady ? "#F0FDF4" : "#FFF7ED" }}
+                        style={{ backgroundColor: isPendingPayment ? "#FEF2F2" : isReady ? "#F0FDF4" : "#FFF7ED" }}
                       >
-                        {isReady ? (
+                        {isPendingPayment ? (
+                          <Loader2 size={15} style={{ color: "#EF4444" }} className="animate-spin" />
+                        ) : isReady ? (
                           <CheckCircle2 size={15} style={{ color: "#16A34A" }} />
                         ) : (
                           <Loader2
@@ -147,9 +150,9 @@ export default function OrdersPage() {
                         )}
                         <span
                           className="text-xs font-bold"
-                          style={{ color: isReady ? "#16A34A" : "#F97316" }}
+                          style={{ color: isPendingPayment ? "#EF4444" : isReady ? "#16A34A" : "#F97316" }}
                         >
-                          {isReady ? "¡Listo para retirar!" : order.status === "pending" ? "Recibido" : "En preparación"}
+                          {isPendingPayment ? "Pendiente de pago digital" : isReady ? "¡Listo para retirar!" : order.status === "pending" ? "Recibido" : "En preparación"}
                         </span>
                       </div>
 
@@ -168,8 +171,22 @@ export default function OrdersPage() {
                           </span>
                         </div>
 
-                        {/* Step tracker */}
-                        <div className="flex items-center gap-0">
+                        {isPendingPayment ? (
+                          <div className="pt-1.5 pb-0.5 space-y-2">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              El pago digital no se pudo confirmar todavía. Hacé click abajo para intentar pagar o verificar el estado de acreditación de tu pago.
+                            </p>
+                            <button
+                              onClick={() => router.push(`/checkout/success?orderId=${order.id}`)}
+                              className="w-full flex items-center justify-center gap-2 py-3 bg-[#009EE3] hover:bg-[#0086C3] text-white font-bold rounded-xl text-xs transition-colors shadow-sm active:scale-[0.98]"
+                            >
+                              <span>Completar pago con Mercado Pago</span>
+                              <ChevronRight size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          /* Step tracker */
+                          <div className="flex items-center gap-0">
                           {STEPS.map((label, i) => {
                             const done = i <= step
                             const isLast = i === STEPS.length - 1
@@ -209,6 +226,7 @@ export default function OrdersPage() {
                             )
                           })}
                         </div>
+                        )}
 
                         {/* Footer: pickup code + price */}
                         <div className="flex items-center justify-between pt-1 border-t border-border/40">
