@@ -154,8 +154,18 @@ export default function CheckoutPage() {
       if (data.success) {
         dispatch({ type: "CLEAR_CART" })
         if (selectedPayment === "mercadopago" && data.initPoint) {
-          toast.success("Redirigiendo a Mercado Pago...")
-          window.location.href = data.initPoint
+          const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          if (isLocalhost) {
+            // Open real Mercado Pago in a new tab for sandbox simulation
+            window.open(data.initPoint, "_blank")
+            // Instantly transition main tab to local success flow to trigger SSE & clean experience
+            router.push(`/checkout/success?orderId=${data.order.id}`)
+            toast.success("¡Pedido creado! Abriendo Mercado Pago en nueva pestaña...")
+          } else {
+            // Standard production redirection flow
+            toast.success("Redirigiendo a Mercado Pago...")
+            window.location.href = data.initPoint
+          }
         } else {
           router.push("/orders")
           toast.success("¡Pedido confirmado!", {

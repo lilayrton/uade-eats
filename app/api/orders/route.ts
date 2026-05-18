@@ -85,17 +85,24 @@ export async function POST(req: Request) {
           currency_id: "ARS"
         }))
 
-        const preferenceResult = await mpPreference.create({
-          body: {
-            items: mpItems,
-            external_reference: order.id,
-            back_urls: {
-              success: `${baseUrl}/checkout/success?orderId=${order.id}`,
-              failure: `${baseUrl}/checkout/failure?orderId=${order.id}`,
-              pending: `${baseUrl}/checkout/pending?orderId=${order.id}`
-            },
-            auto_return: "approved"
+        const isLocalhost = baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1")
+
+        const preferenceBody: any = {
+          items: mpItems,
+          external_reference: order.id
+        }
+
+        if (!isLocalhost) {
+          preferenceBody.back_urls = {
+            success: `${baseUrl}/checkout/success?orderId=${order.id}`,
+            failure: `${baseUrl}/checkout/failure?orderId=${order.id}`,
+            pending: `${baseUrl}/checkout/pending?orderId=${order.id}`
           }
+          preferenceBody.auto_return = "approved"
+        }
+
+        const preferenceResult = await mpPreference.create({
+          body: preferenceBody
         })
 
         return NextResponse.json({
