@@ -13,8 +13,8 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = email.toLowerCase().trim()
-    if (!trimmed.endsWith("@uade.edu.ar")) {
-      setError("Solo podés ingresar con un mail @uade.edu.ar")
+    if (!trimmed) {
+      setError("Ingresá tu correo electrónico")
       return
     }
     if (!password) {
