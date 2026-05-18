@@ -16,10 +16,15 @@ function SuccessContent() {
   const [countdown, setCountdown] = useState(4)
 
   useEffect(() => {
+    // Wait for Next.js to hydrate searchParams. If still not available after 3s, show error.
     if (!orderId) {
-      setError(true)
-      setLoading(false)
-      return
+      const timeout = setTimeout(() => {
+        if (!orderId) {
+          setError(true)
+          setLoading(false)
+        }
+      }, 3000)
+      return () => clearTimeout(timeout)
     }
 
     const confirmOrder = async () => {
