@@ -5,6 +5,7 @@ import { useApp } from "@/context/AppContext"
 
 interface FieldErrors {
   nombre: string
+  legajo: string
   email: string
   password: string
   confirmPassword: string
@@ -13,6 +14,7 @@ interface FieldErrors {
 
 const emptyErrors: FieldErrors = {
   nombre: "",
+  legajo: "",
   email: "",
   password: "",
   confirmPassword: "",
@@ -22,6 +24,7 @@ export default function RegisterPage() {
   const { dispatch } = useApp()
 
   const [nombre, setNombre] = useState("")
+  const [legajo, setLegajo] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -35,6 +38,11 @@ export default function RegisterPage() {
     switch (field) {
       case "nombre":
         return value.trim() === "" ? "El nombre no puede estar vacío" : ""
+      case "legajo":
+        if (value.trim() === "") return "El legajo es requerido"
+        if (value.trim().length !== 7) return "El legajo debe tener 7 caracteres"
+        if (!/^\d+$/.test(value.trim())) return "El legajo debe contener solo números"
+        return ""
       case "email":
         if (value.trim() === "") return "El email es requerido"
         if (!value.includes("@")) return "Email inválido"
@@ -67,6 +75,7 @@ export default function RegisterPage() {
 
     const newErrors: FieldErrors = {
       nombre: validateField("nombre", nombre),
+      legajo: validateField("legajo", legajo),
       email: validateField("email", email),
       password: validateField("password", password),
       confirmPassword: validateField("confirmPassword", confirmPassword),
@@ -84,6 +93,7 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: nombre.trim(),
+          legajo: legajo.trim(),
           email: email.toLowerCase().trim(),
           password,
           role,
@@ -153,6 +163,29 @@ export default function RegisterPage() {
               {errors.nombre && (
                 <p className="text-xs font-medium px-1" style={{ color: "#EF4444" }}>
                   {errors.nombre}
+                </p>
+              )}
+            </div>
+
+            {/* Legajo */}
+            <div className="space-y-1.5">
+              <input
+                type="text"
+                value={legajo}
+                onChange={(e) => {
+                  setLegajo(e.target.value)
+                  if (submitted) setErrors((prev) => ({ ...prev, legajo: validateField("legajo", e.target.value) }))
+                }}
+                onBlur={(e) => handleBlur("legajo", e.target.value)}
+                placeholder="Legajo (7 números)"
+                inputMode="numeric"
+                maxLength={7}
+                disabled={loading}
+                className="w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
+              />
+              {errors.legajo && (
+                <p className="text-xs font-medium px-1" style={{ color: "#EF4444" }}>
+                  {errors.legajo}
                 </p>
               )}
             </div>

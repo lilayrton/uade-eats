@@ -6,9 +6,12 @@ import { cookies } from "next/headers"
 
 export async function POST(req: Request) {
   try {
-    const { nombre, email, password, role = "student", storeId } = await req.json()
+    const { nombre, legajo, email, password, role = "student", storeId } = await req.json()
 
     if (role === "student") {
+      if (!legajo || legajo.length !== 7 || !/^\d+$/.test(legajo)) {
+        return NextResponse.json({ error: "El legajo debe tener 7 números" }, { status: 400 })
+      }
       if (!email || !email.endsWith("@uade.edu.ar")) {
         return NextResponse.json({ error: "Solo podés registrarte con un mail @uade.edu.ar" }, { status: 400 })
       }
@@ -43,6 +46,7 @@ export async function POST(req: Request) {
         email,
         passwordHash,
         role,
+        legajo: role === "student" ? legajo : null,
         storeId: role === "store_owner" ? storeId : null
       },
     })
