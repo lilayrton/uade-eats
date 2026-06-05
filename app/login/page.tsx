@@ -41,7 +41,11 @@ export default function LoginPage() {
       }
 
       dispatch({ type: "LOGIN", payload: data.user })
-      window.location.replace("/")
+      if (data.user.role === "store_owner") {
+        window.location.replace("/store-portal")
+      } else {
+        window.location.replace("/")
+      }
     } catch (err) {
       setError("Error de conexión")
       setLoading(false)
