@@ -197,8 +197,14 @@ export default function StorePortalPage() {
       console.error("SSE connection error:", err)
     }
 
+    // Polling fallback every 5 seconds para Vercel serverless
+    const interval = setInterval(() => {
+      fetchOrders(false)
+    }, 5000)
+
     return () => {
       eventSource.close()
+      clearInterval(interval)
     }
   }, [fetchOrders, storeId])
 
