@@ -102,6 +102,7 @@ export default function CheckoutPage() {
   const [step, setStep] = useState<1 | 2>(1)
   const [selectedPayment, setSelectedPayment] = useState<PaymentId>("efectivo")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
 
   const cart = state.cart
   const storeName = cart.storeName ?? "UADE Eats"
@@ -113,10 +114,10 @@ export default function CheckoutPage() {
   }, [])
 
   useEffect(() => {
-    if (mounted && cart.items.length === 0) {
+    if (mounted && cart.items.length === 0 && !isSuccess) {
       router.replace("/cart")
     }
-  }, [mounted, cart.items.length, router])
+  }, [mounted, cart.items.length, router, isSuccess])
 
   const total = cart.items.reduce((sum, item) => sum + item.quantity * item.product.price, 0)
 
@@ -152,6 +153,7 @@ export default function CheckoutPage() {
 
       const data = await res.json()
       if (data.success) {
+        setIsSuccess(true)
         dispatch({ type: "CLEAR_CART" })
         if (selectedPayment === "mercadopago" && data.initPoint) {
           const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"

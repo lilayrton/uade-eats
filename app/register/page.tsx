@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useApp } from "@/context/AppContext"
 
 interface FieldErrors {
@@ -8,7 +8,6 @@ interface FieldErrors {
   email: string
   password: string
   confirmPassword: string
-  storeId?: string
   server?: string
 }
 
@@ -17,7 +16,6 @@ const emptyErrors: FieldErrors = {
   email: "",
   password: "",
   confirmPassword: "",
-  storeId: "",
 }
 
 export default function RegisterPage() {
@@ -27,25 +25,11 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [role, setRole] = useState<"student" | "store_owner">("student")
-  const [storeId, setStoreId] = useState("")
-  const [stores, setStores] = useState<any[]>([])
   const [errors, setErrors] = useState<FieldErrors>(emptyErrors)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (role === "store_owner" && stores.length === 0) {
-      fetch("/api/stores")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setStores(data.stores)
-          }
-        })
-        .catch(console.error)
-    }
-  }, [role, stores.length])
+  const role = "student"
 
   function validateField(field: keyof FieldErrors, value: string): string {
     switch (field) {
@@ -54,7 +38,7 @@ export default function RegisterPage() {
       case "email":
         if (value.trim() === "") return "El email es requerido"
         if (!value.includes("@")) return "Email inválido"
-        if (role === "student" && !value.toLowerCase().trim().endsWith("@uade.edu.ar")) {
+        if (!value.toLowerCase().trim().endsWith("@uade.edu.ar")) {
           return "Solo podés registrarte con un mail @uade.edu.ar"
         }
         return ""
@@ -66,8 +50,6 @@ export default function RegisterPage() {
         return ""
       case "confirmPassword":
         return value !== password ? "Las contraseñas no coinciden" : ""
-      case "storeId":
-        return role === "store_owner" && value === "" ? "Debés seleccionar un local" : ""
       default:
         return ""
     }
@@ -88,7 +70,6 @@ export default function RegisterPage() {
       email: validateField("email", email),
       password: validateField("password", password),
       confirmPassword: validateField("confirmPassword", confirmPassword),
-      storeId: validateField("storeId", storeId),
     }
     setErrors(newErrors)
 
@@ -106,7 +87,6 @@ export default function RegisterPage() {
           email: email.toLowerCase().trim(),
           password,
           role,
-          storeId: role === "store_owner" ? storeId : undefined
         }),
       })
 
@@ -119,13 +99,7 @@ export default function RegisterPage() {
       }
 
       dispatch({ type: "LOGIN", payload: data.user })
-      
-      // Redirect based on role
-      if (data.user.role === "store_owner") {
-        window.location.replace("/store-portal")
-      } else {
-        window.location.replace("/")
-      }
+      window.location.replace("/")
     } catch (err) {
       setErrors(prev => ({ ...prev, server: "Error de conexión" }))
       setLoading(false)
@@ -149,7 +123,7 @@ export default function RegisterPage() {
               </span>
             </h1>
             <p className="text-sm text-muted-foreground font-medium">
-              {role === "student" ? "Creá tu cuenta universitaria" : "Registrá tu comedor o local"}
+              Creá tu cuenta universitaria
             </p>
           </div>
 
@@ -161,38 +135,6 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {/* Account Type Selector */}
-            <div className="flex bg-[#F3F4F6] p-1 rounded-2xl mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setRole("student")
-                  setErrors(emptyErrors)
-                }}
-                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-                  role === "student"
-                    ? "bg-white text-[#1C1917] shadow-sm"
-                    : "text-muted-foreground hover:text-[#1C1917]"
-                }`}
-              >
-                Estudiante
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setRole("store_owner")
-                  setErrors(emptyErrors)
-                }}
-                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-                  role === "store_owner"
-                    ? "bg-white text-[#1C1917] shadow-sm"
-                    : "text-muted-foreground hover:text-[#1C1917]"
-                }`}
-              >
-                Comedor
-              </button>
-            </div>
-
             {/* Nombre */}
             <div className="space-y-1.5">
               <input
@@ -203,7 +145,7 @@ export default function RegisterPage() {
                   if (submitted) setErrors((prev) => ({ ...prev, nombre: validateField("nombre", e.target.value) }))
                 }}
                 onBlur={(e) => handleBlur("nombre", e.target.value)}
-                placeholder={role === "student" ? "Nombre" : "Nombre del Administrador"}
+                placeholder="Nombre"
                 autoComplete="name"
                 disabled={loading}
                 className="w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
@@ -215,40 +157,6 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {/* Local Dropdown for Store Owners */}
-            {role === "store_owner" && (
-              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="relative">
-                  <select
-                    value={storeId}
-                    onChange={(e) => {
-                      setStoreId(e.target.value)
-                      if (submitted) setErrors((prev) => ({ ...prev, storeId: validateField("storeId", e.target.value) }))
-                    }}
-                    disabled={loading}
-                    className="w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors appearance-none"
-                  >
-                    <option value="">Selecciona tu local comedor</option>
-                    {stores.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-muted-foreground">
-                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                    </svg>
-                  </div>
-                </div>
-                {errors.storeId && (
-                  <p className="text-xs font-medium px-1" style={{ color: "#EF4444" }}>
-                    {errors.storeId}
-                  </p>
-                )}
-              </div>
-            )}
-
             {/* Email */}
             <div className="space-y-1.5">
               <input
@@ -259,7 +167,7 @@ export default function RegisterPage() {
                   if (submitted) setErrors((prev) => ({ ...prev, email: validateField("email", e.target.value) }))
                 }}
                 onBlur={(e) => handleBlur("email", e.target.value)}
-                placeholder={role === "student" ? "usuario@uade.edu.ar" : "email@proveedor.com"}
+                placeholder="usuario@uade.edu.ar"
                 autoComplete="email"
                 inputMode="email"
                 disabled={loading}
