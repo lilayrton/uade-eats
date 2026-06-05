@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { storeId, items, paymentMethod } = body
+    const { storeId, items, paymentMethod, couponCode } = body
 
     if (!storeId || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Invalid request data" }, { status: 400 })
@@ -41,6 +41,12 @@ export async function POST(req: Request) {
         unitPrice: dbProduct.price
       }
     })
+
+    let discount = 0
+    if (couponCode === "UADE2026") {
+      discount = total * 0.20
+      total = total - discount
+    }
 
     // Generate random 4-digit pickup code
     const pickupCode = Math.floor(1000 + Math.random() * 9000)
@@ -81,7 +87,7 @@ export async function POST(req: Request) {
           id: item.productId,
           title: item.product.name,
           quantity: item.quantity,
-          unit_price: item.unitPrice,
+          unit_price: couponCode === "UADE2026" ? item.unitPrice * 0.8 : item.unitPrice,
           currency_id: "ARS"
         }))
 

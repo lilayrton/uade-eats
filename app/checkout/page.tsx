@@ -103,6 +103,8 @@ export default function CheckoutPage() {
   const [selectedPayment, setSelectedPayment] = useState<PaymentId>("efectivo")
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [couponInput, setCouponInput] = useState("")
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null)
 
   const cart = state.cart
   const storeName = cart.storeName ?? "UADE Eats"
@@ -119,7 +121,9 @@ export default function CheckoutPage() {
     }
   }, [mounted, cart.items.length, router, isSuccess])
 
-  const total = cart.items.reduce((sum, item) => sum + item.quantity * item.product.price, 0)
+  const subtotal = cart.items.reduce((sum, item) => sum + item.quantity * item.product.price, 0)
+  const discount = appliedCoupon === "UADE2026" ? subtotal * 0.20 : 0
+  const total = subtotal - discount
 
   const orderItems = cart.items.map((ci) => ({
     id: ci.product.id,
@@ -147,7 +151,8 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           storeId: cart.storeId,
           items: cart.items.map(item => ({ productId: item.product.id, quantity: item.quantity })),
-          paymentMethod: selectedPayment
+          paymentMethod: selectedPayment,
+          couponCode: appliedCoupon
         })
       })
 
@@ -235,8 +240,13 @@ export default function CheckoutPage() {
             <Step1Content
               storeName={storeName}
               items={orderItems}
-              subtotal={total}
+              subtotal={subtotal}
+              discount={discount}
               total={total}
+              couponInput={couponInput}
+              setCouponInput={setCouponInput}
+              appliedCoupon={appliedCoupon}
+              setAppliedCoupon={setAppliedCoupon}
             />
           ) : (
             <Step2Content
@@ -294,12 +304,22 @@ function Step1Content({
   storeName,
   items,
   subtotal,
+  discount,
   total,
+  couponInput,
+  setCouponInput,
+  appliedCoupon,
+  setAppliedCoupon
 }: {
   storeName: string
   items: Array<{ id: string; name: string; quantity: number; unitPrice: number }>
   subtotal: number
+  discount: number
   total: number
+  couponInput: string
+  setCouponInput: (val: string) => void
+  appliedCoupon: string | null
+  setAppliedCoupon: (val: string | null) => void
 }) {
   return (
     <div className="pt-2 space-y-3">
@@ -339,6 +359,40 @@ function Step1Content({
         </div>
       </div>
 
+      {/* Coupon input */}
+      <div className="mx-4 bg-white rounded-2xl border border-[#F3F4F6] p-2 flex gap-2 shadow-sm">
+        <input 
+          type="text" 
+          value={couponInput}
+          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+          placeholder="Cupón de descuento" 
+          className="flex-1 px-4 py-2.5 rounded-xl bg-[#F9F5F0] text-sm uppercase font-bold tracking-wider placeholder:text-muted-foreground placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-[#F97316]/20 transition-all"
+          disabled={!!appliedCoupon}
+        />
+        {appliedCoupon ? (
+          <button 
+            onClick={() => { setAppliedCoupon(null); setCouponInput("") }}
+            className="px-4 py-2.5 rounded-xl font-bold text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+          >
+            Quitar
+          </button>
+        ) : (
+          <button 
+            onClick={() => {
+              if (couponInput === "UADE2026") {
+                setAppliedCoupon("UADE2026")
+                toast.success("¡Cupón del 20% aplicado!")
+              } else if (couponInput) {
+                toast.error("Cupón inválido")
+              }
+            }}
+            className="px-4 py-2.5 rounded-xl font-bold text-sm bg-[#1C1917] hover:bg-black text-white transition-colors"
+          >
+            Aplicar
+          </button>
+        )}
+      </div>
+
       {/* Price breakdown */}
       <div className="mx-4 bg-white rounded-2xl border border-[#F3F4F6] p-4 space-y-2.5 shadow-sm">
         <div className="flex items-center justify-between text-sm">
@@ -356,6 +410,14 @@ function Step1Content({
             Gratis
           </span>
         </div>
+        {discount > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-[#16A34A] font-medium">Descuento ({appliedCoupon})</span>
+            <span className="text-[#16A34A] font-bold">
+              -${discount.toLocaleString("es-AR")}
+            </span>
+          </div>
+        )}
         <div className="h-px bg-[#F3F4F6]" />
         <div className="flex items-center justify-between">
           <span className="font-bold text-[#1C1917]">Total</span>
