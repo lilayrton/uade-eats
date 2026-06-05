@@ -193,7 +193,7 @@ export default function CheckoutPage() {
       toast.error("Error de conexión", { description: "Revisá tu internet e intentá de nuevo." })
       setIsProcessing(false)
     }
-  }, [isProcessing, router, storeName, cart, selectedPayment, dispatch])
+  }, [isProcessing, router, storeName, cart, selectedPayment, dispatch, appliedCoupon])
 
   if (!mounted) {
     return (
