@@ -113,7 +113,7 @@ export default function CartPage() {
             <main className="flex-1 overflow-y-auto pb-[272px]">
 
               {/* Cart item list */}
-              <section className="px-4 space-y-3" aria-label="Productos en el carrito">
+              <section className="px-4 pt-4 space-y-3" aria-label="Productos en el carrito">
                 {cartItems.map((item) => (
                   <CartItem
                     key={item.product.id}
