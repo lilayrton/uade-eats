@@ -45,12 +45,13 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
   const hasActiveFilters = onlyOpen || sortBy !== "relevance"
 
   const filteredStores = useMemo(() => {
+    const normalizedSearch = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     let result = stores.filter((store) => {
       const matchFilter = activeFilter === "all" || store.category === activeFilter
       const matchSearch =
-        search.trim() === "" ||
-        store.name.toLowerCase().includes(search.toLowerCase()) ||
-        store.tagline.toLowerCase().includes(search.toLowerCase())
+        normalizedSearch.trim() === "" ||
+        store.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
+        store.tagline.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch)
       const matchOpen = !onlyOpen || store.isOpen
       return matchFilter && matchSearch && matchOpen
     })
@@ -65,11 +66,12 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
   }, [activeFilter, search, onlyOpen, sortBy, stores])
 
   const filteredProducts = useMemo(() => {
-    if (search.trim() === "") return []
+    const normalizedSearch = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    if (normalizedSearch.trim() === "") return []
     return allProducts.filter(p => 
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.description.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase())
+      p.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
+      p.description.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
+      p.category.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch)
     )
   }, [search, allProducts])
 
