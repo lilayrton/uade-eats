@@ -58,6 +58,7 @@ model Order {
   status        String      @default("pending") // "pending", "preparing", "ready", "completed", "cancelled"
   paymentMethod String
   pickupCode    Int
+  notes         String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   items         OrderItem[]

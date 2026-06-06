@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { storeId, items, paymentMethod, couponCode } = body
+    const { storeId, items, paymentMethod, couponCode, notes } = body
 
     if (!storeId || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Invalid request data" }, { status: 400 })
@@ -60,6 +60,7 @@ export async function POST(req: Request) {
         total,
         paymentMethod: paymentMethod || "efectivo",
         pickupCode,
+        notes: notes || null,
         status: isMP ? "pending_payment" : "pending",
         items: {
           create: orderItemsData

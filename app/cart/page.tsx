@@ -132,6 +132,8 @@ export default function CartPage() {
                 <textarea
                   id="cart-notes"
                   rows={2}
+                  value={state.cart.notes}
+                  onChange={(e) => dispatch({ type: "UPDATE_NOTES", payload: e.target.value })}
                   placeholder="Ej: sin azúcar, sin cebolla…"
                   className="w-full resize-none rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 leading-relaxed"
                   style={{ "--tw-ring-color": "#F97316" } as React.CSSProperties}

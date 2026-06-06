@@ -32,6 +32,7 @@ interface AppState {
     storeId: string | null
     storeName: string | null
     items: CartItem[]
+    notes: string
   }
   notifications: Notification[]
 }
@@ -39,7 +40,7 @@ interface AppState {
 const initialState: AppState = {
   authStatus: "unauthenticated",
   user: null,
-  cart: { storeId: null, storeName: null, items: [] },
+  cart: { storeId: null, storeName: null, items: [], notes: "" },
   notifications: [],
 }
 
@@ -55,6 +56,7 @@ type AppAction =
   | { type: "ADD_TO_CART"; payload: { product: Product; storeId: string; storeName: string } }
   | { type: "REMOVE_FROM_CART"; payload: { productId: string } }
   | { type: "UPDATE_QUANTITY"; payload: { productId: string; quantity: number } }
+  | { type: "UPDATE_NOTES"; payload: string }
   | { type: "CLEAR_CART" }
   | { type: "REGISTER"; payload: { user: User } }
   | { type: "RESTORE_SESSION"; payload: User }
@@ -95,7 +97,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         user: null,
         authStatus: "unauthenticated",
-        cart: { storeId: null, storeName: null, items: [] },
+        cart: { storeId: null, storeName: null, items: [], notes: "" },
       }
 
     case "ADD_TO_CART": {
@@ -127,7 +129,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
       return {
         ...state,
-        cart: { storeId, storeName, items: updatedItems },
+        cart: { storeId, storeName, items: updatedItems, notes: items.length === 0 ? "" : state.cart.notes },
       }
     }
 
@@ -141,6 +143,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
           storeId: updatedItems.length === 0 ? null : state.cart.storeId,
           storeName: updatedItems.length === 0 ? null : state.cart.storeName,
           items: updatedItems,
+          notes: updatedItems.length === 0 ? "" : state.cart.notes,
         },
       }
     }
@@ -158,6 +161,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
             storeId: updatedItems.length === 0 ? null : state.cart.storeId,
             storeName: updatedItems.length === 0 ? null : state.cart.storeName,
             items: updatedItems,
+            notes: updatedItems.length === 0 ? "" : state.cart.notes,
           },
         }
       }
@@ -172,8 +176,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
       }
     }
 
+    case "UPDATE_NOTES":
+      return { ...state, cart: { ...state.cart, notes: action.payload } }
+
     case "CLEAR_CART":
-      return { ...state, cart: { storeId: null, storeName: null, items: [] } }
+      return { ...state, cart: { storeId: null, storeName: null, items: [], notes: "" } }
 
     case "MARK_NOTIFICATION_READ":
       return {

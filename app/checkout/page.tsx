@@ -152,7 +152,8 @@ export default function CheckoutPage() {
           storeId: cart.storeId,
           items: cart.items.map(item => ({ productId: item.product.id, quantity: item.quantity })),
           paymentMethod: selectedPayment,
-          couponCode: appliedCoupon
+          couponCode: appliedCoupon,
+          notes: cart.notes
         })
       })
 

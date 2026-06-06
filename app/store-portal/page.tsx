@@ -43,6 +43,7 @@ interface Order {
   status: OrderStatus
   paymentMethod: string
   pickupCode: number
+  notes?: string | null
   createdAt: string
   updatedAt: string
   user: {
@@ -615,6 +616,14 @@ export default function StorePortalPage() {
                               </span>
                             </div>
                           ))}
+                          {order.notes && (
+                            <div className="mt-2 bg-[#FFF7ED] border border-[#FFEDD5] p-2 rounded-xl text-xs text-[#C2410C]">
+                              <span className="font-bold flex items-center gap-1 mb-0.5">
+                                📝 Nota del cliente:
+                              </span>
+                              <span className="leading-tight block font-medium">{order.notes}</span>
+                            </div>
+                          )}
                           <div className="h-px bg-black/5 my-1" />
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-bold text-foreground">Total cobrado</span>
@@ -736,6 +745,13 @@ export default function StorePortalPage() {
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {order.items.map(i => `${i.quantity}x ${i.product.name}`).join(", ")}
                           </p>
+                          {order.notes && (
+                            <div className="mt-1.5 bg-[#FFF7ED] border border-[#FFEDD5] p-1.5 rounded-lg text-[10px] text-[#C2410C]">
+                              <span className="font-bold flex items-center gap-1">
+                                📝 Nota: {order.notes}
+                              </span>
+                            </div>
+                          )}
                           <span className="text-[10px] text-muted-foreground font-medium block mt-1">
                             Hora: {formatDate(order.createdAt)} | Total: ${order.total.toLocaleString("es-AR")}
                           </span>
