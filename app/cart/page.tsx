@@ -111,13 +111,6 @@ export default function CartPage() {
         ) : (
           <>
             <main className="flex-1 overflow-y-auto pb-[272px]">
-              {/* Swipe hint */}
-              <div className="flex items-center gap-1.5 mx-4 mt-4 mb-3 px-3 py-2 rounded-xl" style={{ backgroundColor: "#FFF0E6" }}>
-                <Info size={13} style={{ color: "#F97316" }} />
-                <p className="text-xs font-medium" style={{ color: "#C2410C" }}>
-                  Deslizá hacia la izquierda para eliminar un producto
-                </p>
-              </div>
 
               {/* Cart item list */}
               <section className="px-4 space-y-3" aria-label="Productos en el carrito">
