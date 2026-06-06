@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle, ArrowLeft, Loader2, ArrowRight } from "lucide-react"
 import { useApp } from "@/context/AppContext"
 
-export default function CheckoutFailurePage() {
+function FailureContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { dispatch } = useApp()
@@ -104,5 +104,17 @@ export default function CheckoutFailurePage() {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function CheckoutFailurePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-svh flex items-center justify-center bg-[#F9F5F0]">
+        <Loader2 className="animate-spin text-[#F97316]" size={32} />
+      </div>
+    }>
+      <FailureContent />
+    </Suspense>
   )
 }
