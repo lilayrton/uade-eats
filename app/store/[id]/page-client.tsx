@@ -45,9 +45,15 @@ export default function StorePageClient({ storeData, storeProducts }: StorePageC
 
   const handleAdd = useCallback(
     (product: Product) => {
+      if (state.cart.storeId !== null && state.cart.storeId !== storeData.id) {
+        const confirmed = window.confirm(
+          `Ya tenés un carrito creado con cosas de "${state.cart.storeName}".\n¿Deseás eliminar el actual para empezar uno nuevo acá?`
+        )
+        if (!confirmed) return
+      }
       dispatch({ type: "ADD_TO_CART", payload: { product, storeId: storeData.id, storeName: storeData.name } })
     },
-    [dispatch, storeData.id, storeData.name]
+    [dispatch, storeData.id, storeData.name, state.cart.storeId, state.cart.storeName]
   )
 
   const handleRemove = useCallback(

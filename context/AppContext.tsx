@@ -58,6 +58,7 @@ type AppAction =
   | { type: "CLEAR_CART" }
   | { type: "REGISTER"; payload: { user: User } }
   | { type: "RESTORE_SESSION"; payload: User }
+  | { type: "RESTORE_CART"; payload: AppState["cart"] }
   | { type: "MARK_NOTIFICATION_READ"; payload: { id: string } }
   | { type: "MARK_ALL_READ" }
   | { type: "ADD_NOTIFICATION"; payload: { type: "order" | "promo" | "system"; title: string; body: string } }
@@ -85,6 +86,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case "RESTORE_SESSION":
       return { ...state, user: action.payload, authStatus: "authenticated" }
+
+    case "RESTORE_CART":
+      return { ...state, cart: action.payload }
 
     case "LOGOUT":
       return {
@@ -228,7 +232,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     0
   )
 
-  // On mount: restore session from cookie so a full page reload keeps the user logged in
+  // On mount: restore session from cookie and cart from localStorage
   useEffect(() => {
     if (document.cookie.includes("uade-eats-auth=1")) {
       const stored = localStorage.getItem("uade-eats-user")
@@ -240,6 +244,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       } else {
         dispatch({ type: "LOGOUT" })
+      }
+    }
+
+    const storedCart = localStorage.getItem("uade-eats-cart")
+    if (storedCart) {
+      try {
+        dispatch({ type: "RESTORE_CART", payload: JSON.parse(storedCart) })
+      } catch (err) {
+        console.error("Failed to restore cart", err)
       }
     }
   }, [])
@@ -260,6 +273,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("uade-eats-user")
     }
   }, [state.authStatus, state.user])
+
+  // Persist cart to localStorage whenever it changes
+  const isCartRestored = useRef(false)
+  useEffect(() => {
+    if (!isCartRestored.current) {
+      isCartRestored.current = true
+      return
+    }
+    localStorage.setItem("uade-eats-cart", JSON.stringify(state.cart))
+  }, [state.cart])
 
   // Listen to SSE events for real-time Event-Driven updates and trigger notifications
   useEffect(() => {
