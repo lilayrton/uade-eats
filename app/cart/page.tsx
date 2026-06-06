@@ -80,17 +80,12 @@ export default function CartPage() {
                 Tu pedido
               </h1>
               {!isEmpty && storeName && (
-                <button
-                  onClick={() => router.push("/store")}
-                  className="flex items-center gap-1 mt-0.5 group"
-                  aria-label={`Ver ${storeName}`}
-                >
+                <div className="flex items-center gap-1 mt-0.5">
                   <Store size={11} style={{ color: "#F97316" }} />
-                  <span className="text-xs text-muted-foreground group-hover:underline leading-none">
+                  <span className="text-xs text-muted-foreground leading-none">
                     {storeName}
                   </span>
-                  <ChevronRight size={11} className="text-muted-foreground" />
-                </button>
+                </div>
               )}
             </div>
 
