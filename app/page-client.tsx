@@ -9,8 +9,12 @@ import { BottomNav } from "@/components/bottom-nav"
 import { SearchBar } from "@/components/search-bar"
 import { NotificationsPanel } from "@/components/notifications-panel"
 import { FilterModal } from "@/components/filter-modal"
-import { Store } from "@/lib/types"
+import { Store, Product } from "@/lib/types"
 import { useApp } from "@/context/AppContext"
+
+export interface GlobalProduct extends Product {
+  storeName: string
+}
 
 const CATEGORY_DISPLAY: Record<string, string> = {
   cafeteria: "Cafetería",
@@ -21,9 +25,10 @@ const CATEGORY_DISPLAY: Record<string, string> = {
 
 interface HomePageProps {
   stores: Store[]
+  allProducts: GlobalProduct[]
 }
 
-export default function HomePageClient({ stores }: HomePageProps) {
+export default function HomePageClient({ stores, allProducts }: HomePageProps) {
   const router = useRouter()
   const { cartCount, state, dispatch } = useApp()
   const { notifications } = state
@@ -39,7 +44,7 @@ export default function HomePageClient({ stores }: HomePageProps) {
   const unreadCount = notifications.filter((n) => !n.read).length
   const hasActiveFilters = onlyOpen || sortBy !== "relevance"
 
-  const filtered = useMemo(() => {
+  const filteredStores = useMemo(() => {
     let result = stores.filter((store) => {
       const matchFilter = activeFilter === "all" || store.category === activeFilter
       const matchSearch =
@@ -57,9 +62,18 @@ export default function HomePageClient({ stores }: HomePageProps) {
     }
 
     return result
-  }, [activeFilter, search, onlyOpen, sortBy])
+  }, [activeFilter, search, onlyOpen, sortBy, stores])
 
-  const openCount = filtered.filter((s) => s.isOpen).length
+  const filteredProducts = useMemo(() => {
+    if (search.trim() === "") return []
+    return allProducts.filter(p => 
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.description.toLowerCase().includes(search.toLowerCase()) ||
+      p.category.toLowerCase().includes(search.toLowerCase())
+    )
+  }, [search, allProducts])
+
+  const openCount = filteredStores.filter((s) => s.isOpen).length
 
   const hour = new Date().getHours()
   let greeting = "Buenas noches"
@@ -133,52 +147,114 @@ export default function HomePageClient({ stores }: HomePageProps) {
 
         {/* ── Store list ── */}
         <main className="flex-1 overflow-y-auto px-4 pt-4 pb-28">
-          {/* Section label */}
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-foreground">
-              {activeFilter === "all" ? "Locales disponibles" : `Locales · ${CATEGORY_DISPLAY[activeFilter] ?? activeFilter}`}
-            </h2>
-            <span className="text-xs text-muted-foreground font-medium">
-              {openCount} abierto{openCount !== 1 ? "s" : ""}
-            </span>
-          </div>
+          {search.trim() !== "" ? (
+            <div className="space-y-6">
+              {filteredProducts.length > 0 && (
+                <section>
+                  <h2 className="text-base font-bold text-foreground mb-3">
+                    Productos ({filteredProducts.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {filteredProducts.map(product => (
+                      <button
+                        key={product.id}
+                        onClick={() => router.push(`/store/${product.storeId}`)}
+                        className="w-full bg-card rounded-2xl border border-border p-3 flex gap-4 text-left hover:bg-muted/30 active:scale-[0.98] transition-all"
+                      >
+                        <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-muted">
+                          {product.imageUrl && (
+                            <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <h3 className="font-bold text-sm text-foreground truncate">{product.name}</h3>
+                          <p className="text-xs text-muted-foreground truncate">{product.storeName}</p>
+                          <p className="text-sm font-black text-[#F97316] mt-1">${product.price.toLocaleString("es-AR")}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
 
-          {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-3xl"
-                style={{ backgroundColor: "#FFF0E6" }}
-              >
-                🔍
-              </div>
-              <p className="font-semibold text-foreground">Sin resultados</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Probá con otro nombre o categoría
-              </p>
+              {filteredStores.length > 0 && (
+                <section>
+                  <h2 className="text-base font-bold text-foreground mb-3">
+                    Locales ({filteredStores.length})
+                  </h2>
+                  <div className="space-y-4">
+                    {filteredStores.map((store) => (
+                      <StoreCard key={store.id} store={store} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {filteredProducts.length === 0 && filteredStores.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-3xl"
+                    style={{ backgroundColor: "#FFF0E6" }}
+                  >
+                    🔍
+                  </div>
+                  <p className="font-semibold text-foreground">Sin resultados</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Probá con otro nombre o categoría
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {filtered.map((store) => (
-                <StoreCard key={store.id} store={store} />
-              ))}
-            </div>
-          )}
+            <>
+              {/* Section label */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-foreground">
+                  {activeFilter === "all" ? "Locales disponibles" : `Locales · ${CATEGORY_DISPLAY[activeFilter] ?? activeFilter}`}
+                </h2>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {openCount} abierto{openCount !== 1 ? "s" : ""}
+                </span>
+              </div>
 
-          {/* Promo banner */}
-          <div
-            className="mt-6 rounded-2xl p-4 flex items-center gap-4 overflow-hidden relative"
-            style={{ backgroundColor: "#F97316" }}
-          >
-            <div className="flex-1">
-              <p className="text-white font-bold text-base leading-tight text-balance">
-                ¡Primera orden gratis!
-              </p>
-              <p className="text-orange-100 text-xs mt-1 leading-relaxed">
-                Usá el código <span className="font-bold text-white">UADE2026</span> en tu primer pedido
-              </p>
-            </div>
-            <div className="text-4xl shrink-0">🎉</div>
-          </div>
+              {filteredStores.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-3xl"
+                    style={{ backgroundColor: "#FFF0E6" }}
+                  >
+                    🔍
+                  </div>
+                  <p className="font-semibold text-foreground">Sin resultados</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Probá con otro nombre o categoría
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredStores.map((store) => (
+                    <StoreCard key={store.id} store={store} />
+                  ))}
+                </div>
+              )}
+
+              {/* Promo banner */}
+              <div
+                className="mt-6 rounded-2xl p-4 flex items-center gap-4 overflow-hidden relative"
+                style={{ backgroundColor: "#F97316" }}
+              >
+                <div className="flex-1">
+                  <p className="text-white font-bold text-base leading-tight text-balance">
+                    ¡Primera orden gratis!
+                  </p>
+                  <p className="text-orange-100 text-xs mt-1 leading-relaxed">
+                    Usá el código <span className="font-bold text-white">UADE2026</span> en tu primer pedido
+                  </p>
+                </div>
+                <div className="text-4xl shrink-0">🎉</div>
+              </div>
+            </>
+          )}
         </main>
 
         {/* ── Bottom Navigation ── */}

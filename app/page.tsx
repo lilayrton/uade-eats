@@ -9,6 +9,9 @@ export default async function HomePage() {
   const storesData = await db.store.findMany({
     orderBy: {
       rating: 'desc'
+    },
+    include: {
+      products: true
     }
   })
 
@@ -24,5 +27,18 @@ export default async function HomePage() {
     rating: store.rating,
   }))
 
-  return <HomePageClient stores={stores} />
+  const allProducts = storesData.flatMap(store => 
+    store.products.map(p => ({
+      id: p.id,
+      storeId: p.storeId,
+      storeName: store.name,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      category: p.category as any,
+      imageUrl: p.imageUrl,
+    }))
+  )
+
+  return <HomePageClient stores={stores} allProducts={allProducts} />
 }
