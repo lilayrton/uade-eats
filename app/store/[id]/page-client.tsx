@@ -19,6 +19,7 @@ export default function StorePageClient({ storeData, storeProducts }: StorePageC
   const router = useRouter()
   const { state, dispatch, cartCount } = useApp()
   const [activeNav, setActiveNav] = useState("home")
+  const [pendingAddProduct, setPendingAddProduct] = useState<Product | null>(null)
 
   const categories = useMemo(
     () => Array.from(new Set(storeProducts.map((p) => p.category))),
@@ -46,14 +47,12 @@ export default function StorePageClient({ storeData, storeProducts }: StorePageC
   const handleAdd = useCallback(
     (product: Product) => {
       if (state.cart.storeId !== null && state.cart.storeId !== storeData.id) {
-        const confirmed = window.confirm(
-          `Ya tenés un carrito creado con cosas de "${state.cart.storeName}".\n¿Deseás eliminar el actual para empezar uno nuevo acá?`
-        )
-        if (!confirmed) return
+        setPendingAddProduct(product)
+        return
       }
       dispatch({ type: "ADD_TO_CART", payload: { product, storeId: storeData.id, storeName: storeData.name } })
     },
-    [dispatch, storeData.id, storeData.name, state.cart.storeId, state.cart.storeName]
+    [dispatch, storeData.id, storeData.name, state.cart.storeId]
   )
 
   const handleRemove = useCallback(
@@ -204,6 +203,40 @@ export default function StorePageClient({ storeData, storeProducts }: StorePageC
           }}
           cartCount={cartCount}
         />
+        {/* ── Custom Modal for Cart Collision ────────────────────────── */}
+        {pendingAddProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-[320px] p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto" style={{ backgroundColor: "#FFF0E6" }}>
+                <ShoppingBag size={24} color="#F97316" />
+              </div>
+              <h3 className="text-xl font-black text-center text-[#1C1917] mb-2">
+                ¿Empezar de cero?
+              </h3>
+              <p className="text-sm text-center text-muted-foreground mb-6 leading-relaxed">
+                Ya tenés un pedido armado en <span className="font-bold text-[#1C1917]">{state.cart.storeName}</span>. Si agregás esto, se descartará tu carrito actual.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    dispatch({ type: "ADD_TO_CART", payload: { product: pendingAddProduct, storeId: storeData.id, storeName: storeData.name } })
+                    setPendingAddProduct(null)
+                  }}
+                  className="w-full py-3.5 rounded-2xl font-bold text-white active:scale-[0.98] transition-transform"
+                  style={{ backgroundColor: "#F97316" }}
+                >
+                  Sí, vaciar y agregar
+                </button>
+                <button
+                  onClick={() => setPendingAddProduct(null)}
+                  className="w-full py-3.5 rounded-2xl font-bold text-[#1C1917] bg-[#F3F4F6] hover:bg-[#E5E7EB] active:scale-[0.98] transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
