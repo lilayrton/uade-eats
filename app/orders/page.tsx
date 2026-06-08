@@ -36,6 +36,8 @@ export default function OrdersPage() {
   const [activeNav] = useState("orders")
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null)
+  const [isCancelling, setIsCancelling] = useState(false)
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -195,21 +197,8 @@ export default function OrdersPage() {
                                 Verificar estado del pago
                               </button>
                               <button
-                                onClick={async () => {
-                                  if (!confirm("¿Estás seguro de que querés cancelar este pedido?")) return
-                                  try {
-                                    const res = await fetch("/api/store-portal/orders", {
-                                      method: "PATCH",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({ orderId: order.id, status: "cancelled" })
-                                    })
-                                    if (res.ok) {
-                                      toast.success("Pedido cancelado")
-                                      window.location.reload()
-                                    }
-                                  } catch (e) {
-                                    toast.error("Error al cancelar")
-                                  }
+                                onClick={() => {
+                                  setCancelOrderId(order.id)
                                 }}
                                 className="w-full border border-red-200 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
                               >
@@ -355,6 +344,59 @@ export default function OrdersPage() {
             if (id === "profile") router.push("/profile")
           }}
         />
+
+        {/* ── Cancel Order Modal ── */}
+        {cancelOrderId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4">
+                <span className="text-3xl">⚠️</span>
+              </div>
+              <h3 className="font-black text-xl text-[#1C1917] mb-2">¿Cancelar pedido?</h3>
+              <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                Esta acción no se puede deshacer. ¿Estás seguro de que querés cancelar tu pedido pendiente?
+              </p>
+              
+              <div className="w-full flex flex-col gap-3">
+                <button
+                  disabled={isCancelling}
+                  onClick={async () => {
+                    setIsCancelling(true)
+                    try {
+                      const res = await fetch(`/api/orders/${cancelOrderId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ status: "cancelled" })
+                      })
+                      if (res.ok) {
+                        toast.success("Pedido cancelado exitosamente")
+                        setCancelOrderId(null)
+                        fetchOrders()
+                      } else {
+                        const err = await res.json()
+                        toast.error("Error al cancelar", { description: err.error || "Intenta de nuevo" })
+                      }
+                    } catch (e) {
+                      toast.error("Error de red", { description: "Revisá tu conexión" })
+                    } finally {
+                      setIsCancelling(false)
+                    }
+                  }}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-2xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isCancelling ? <Loader2 size={18} className="animate-spin" /> : "Sí, cancelar pedido"}
+                </button>
+                <button
+                  disabled={isCancelling}
+                  onClick={() => setCancelOrderId(null)}
+                  className="w-full bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#1C1917] font-bold py-3.5 rounded-2xl transition-colors disabled:opacity-50"
+                >
+                  No, mantener pedido
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
