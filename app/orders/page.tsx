@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, ChevronRight, MapPin, CheckCircle2, Loader2, Store } from "lucide-react"
+import { Bell, ChevronRight, MapPin, CheckCircle2, Loader2, Store, RefreshCw } from "lucide-react"
+import { toast } from "sonner"
 import { BottomNav } from "@/components/bottom-nav"
 import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
@@ -180,15 +181,41 @@ export default function OrdersPage() {
                         {isPendingPayment ? (
                           <div className="pt-1.5 pb-0.5 space-y-2">
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                              El pago digital no se pudo confirmar todavía. Hacé click abajo para intentar pagar o verificar el estado de acreditación de tu pago.
+                              El pago digital no se pudo confirmar todavía. Podés intentar verificar el estado de tu pago, o cancelar este pedido e intentar nuevamente.
                             </p>
-                            <button
-                              onClick={() => router.push(`/checkout/success?orderId=${order.id}`)}
-                              className="w-full flex items-center justify-center gap-2 py-3 bg-[#009EE3] hover:bg-[#0086C3] text-white font-bold rounded-xl text-xs transition-colors shadow-sm active:scale-[0.98]"
-                            >
-                              <span>Completar pago con Mercado Pago</span>
-                              <ChevronRight size={14} />
-                            </button>
+                            <div className="flex flex-col gap-2">
+                              <button
+                                onClick={() => {
+                                  toast.loading("Verificando estado del pago...")
+                                  router.push(`/checkout/success?orderId=${order.id}`)
+                                }}
+                                className="w-full bg-[#F97316] text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+                              >
+                                <RefreshCw size={14} />
+                                Verificar estado del pago
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!confirm("¿Estás seguro de que querés cancelar este pedido?")) return
+                                  try {
+                                    const res = await fetch("/api/store-portal/orders", {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ orderId: order.id, status: "cancelled" })
+                                    })
+                                    if (res.ok) {
+                                      toast.success("Pedido cancelado")
+                                      window.location.reload()
+                                    }
+                                  } catch (e) {
+                                    toast.error("Error al cancelar")
+                                  }
+                                }}
+                                className="w-full border border-red-200 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+                              >
+                                Cancelar pedido
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           /* Step tracker */
