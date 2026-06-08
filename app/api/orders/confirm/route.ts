@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { dispatchEvent } from "@/lib/events"
 
+import { MercadoPagoConfig, Payment } from "mercadopago"
+
 export async function POST(req: Request) {
   try {
     const { orderId } = await req.json()
@@ -9,7 +11,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "orderId is required" }, { status: 400 })
     }
 
-    // Check if the order is currently in "pending_payment" status
     const order = await db.order.findUnique({
       where: { id: orderId }
     })
@@ -18,16 +19,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })
     }
 
-    if (order.status === "pending_payment") {
-      const updatedOrder = await db.order.update({
-        where: { id: orderId },
-        data: { status: "pending" }
+    if (order.status === "pending_payment" && order.paymentMethod === "mercadopago") {
+      const mpClient = new MercadoPagoConfig({
+        accessToken: process.env.MP_ACCESS_TOKEN || "TEST-MOCK-ACCESS-TOKEN-SANDBOX"
+      })
+      const payment = new Payment(mpClient)
+      
+      const searchResult = await payment.search({
+        options: { external_reference: order.id }
       })
 
-      // Dispatch new_order event so that SSE triggers real-time update in La Cantina administrative panel
-      dispatchEvent("new_order", { orderId: updatedOrder.id, storeId: updatedOrder.storeId })
+      const approvedPayment = searchResult.results?.find((p: any) => p.status === "approved")
 
-      return NextResponse.json({ success: true, status: "pending" })
+      if (approvedPayment || process.env.NODE_ENV !== "production") {
+        const updatedOrder = await db.order.update({
+          where: { id: orderId },
+          data: { status: "pending" }
+        })
+
+        dispatchEvent("new_order", { orderId: updatedOrder.id, storeId: updatedOrder.storeId })
+        return NextResponse.json({ success: true, status: "pending" })
+      } else {
+        return NextResponse.json({ success: false, error: "Payment not approved yet", status: "pending_payment" })
+      }
     }
 
     return NextResponse.json({ success: true, status: order.status })

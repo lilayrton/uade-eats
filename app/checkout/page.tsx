@@ -159,8 +159,11 @@ export default function CheckoutPage() {
 
       const data = await res.json()
       if (data.success) {
-        setIsSuccess(true)
-        dispatch({ type: "CLEAR_CART" })
+        if (selectedPayment !== "mercadopago") {
+          setIsSuccess(true)
+          dispatch({ type: "CLEAR_CART" })
+        }
+        
         if (selectedPayment === "mercadopago" && data.initPoint) {
           const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
           if (isLocalhost) {
@@ -177,8 +180,10 @@ export default function CheckoutPage() {
             // Standard production redirection flow
             toast.success("Redirigiendo a Mercado Pago...")
             window.location.href = data.initPoint
+            // Si el usuario vuelve con la flecha de atrás, rehabilitamos el botón
+            setTimeout(() => setIsProcessing(false), 2000)
           }
-        } else {
+        } else if (selectedPayment !== "mercadopago") {
           router.push("/orders")
           toast.success("¡Pedido confirmado!", {
             description: `Tu pedido fue recibido por ${storeName}`,

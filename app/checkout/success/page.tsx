@@ -4,10 +4,12 @@ import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle2, Loader2, Calendar, ShieldCheck, ShoppingBag } from "lucide-react"
 import { toast } from "sonner"
+import { useApp } from "@/context/AppContext"
 
 function SuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { dispatch } = useApp()
   const orderId = searchParams.get("orderId")
   const isMock = searchParams.get("mock") === "true"
 
@@ -37,6 +39,7 @@ function SuccessContent() {
         const data = await res.json()
         if (data.success) {
           toast.success("Pago verificado con éxito")
+          dispatch({ type: "CLEAR_CART" })
           setLoading(false)
         } else {
           setError(true)
