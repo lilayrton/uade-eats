@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })
     }
 
-    if (order.status === "pending_payment" && order.paymentMethod === "mercadopago") {
+    if ((order.status === "pending_payment" || order.status === "cancelled") && order.paymentMethod === "mercadopago") {
       const mpClient = new MercadoPagoConfig({
         accessToken: process.env.MP_ACCESS_TOKEN || "TEST-MOCK-ACCESS-TOKEN-SANDBOX"
       })

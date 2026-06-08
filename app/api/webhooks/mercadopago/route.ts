@@ -37,7 +37,7 @@ export async function POST(req: Request) {
           where: { id: orderId }
         })
 
-        if (order && order.status === "pending_payment") {
+        if (order && (order.status === "pending_payment" || order.status === "cancelled")) {
           const updatedOrder = await db.order.update({
             where: { id: orderId },
             data: { status: "pending" }

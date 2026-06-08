@@ -48,20 +48,26 @@ export async function POST(req: Request) {
       total = total - discount
     }
 
-    // Generate random 4-digit pickup code
-    const pickupCode = Math.floor(1000 + Math.random() * 9000)
-
     const isMP = paymentMethod === "mercadopago"
+    
+    // Clean up any previous ghost orders that the user abandoned
+    if (isMP) {
+      await db.order.updateMany({
+        where: { userId: session.id, status: "pending_payment" },
+        data: { status: "cancelled" }
+      })
+    }
 
+    // Create the order
     const order = await db.order.create({
       data: {
         userId: session.id,
         storeId,
         total,
-        paymentMethod: paymentMethod || "efectivo",
-        pickupCode,
-        notes: notes || null,
         status: isMP ? "pending_payment" : "pending",
+        paymentMethod: paymentMethod || "efectivo",
+        notes: notes || null,
+        pickupCode: Math.floor(1000 + Math.random() * 9000), // Generate 4 digit code
         items: {
           create: orderItemsData
         }
