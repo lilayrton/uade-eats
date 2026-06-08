@@ -1,54 +1,70 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useApp } from "@/context/AppContext"
+
+interface Store {
+  id: string
+  name: string
+}
 
 interface FieldErrors {
   nombre: string
-  legajo: string
   email: string
   password: string
   confirmPassword: string
+  storeId: string
   server?: string
 }
 
 const emptyErrors: FieldErrors = {
   nombre: "",
-  legajo: "",
   email: "",
   password: "",
   confirmPassword: "",
+  storeId: "",
 }
 
-export default function RegisterPage() {
+export default function RegisterStorePage() {
   const { dispatch } = useApp()
 
   const [nombre, setNombre] = useState("")
-  const [legajo, setLegajo] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [storeId, setStoreId] = useState("")
   const [errors, setErrors] = useState<FieldErrors>(emptyErrors)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [stores, setStores] = useState<Store[]>([])
+  const [loadingStores, setLoadingStores] = useState(true)
 
-  const role = "student"
+  useEffect(() => {
+    async function fetchStores() {
+      try {
+        const res = await fetch("/api/stores")
+        const data = await res.json()
+        if (data.success) {
+          setStores(data.stores)
+        }
+      } catch (err) {
+        console.error("Error fetching stores", err)
+      } finally {
+        setLoadingStores(false)
+      }
+    }
+    fetchStores()
+  }, [])
+
+  const role = "store_owner"
 
   function validateField(field: keyof FieldErrors, value: string): string {
     switch (field) {
       case "nombre":
         return value.trim() === "" ? "El nombre no puede estar vacío" : ""
-      case "legajo":
-        if (value.trim() === "") return "El legajo es requerido"
-        if (value.trim().length !== 7) return "El legajo debe tener 7 caracteres"
-        if (!/^\d+$/.test(value.trim())) return "El legajo debe contener solo números"
-        return ""
       case "email":
         if (value.trim() === "") return "El email es requerido"
         if (!value.includes("@")) return "Email inválido"
-        if (!value.toLowerCase().trim().endsWith("@uade.edu.ar")) {
-          return "Solo podés registrarte con un mail @uade.edu.ar"
-        }
         return ""
       case "password":
         if (value.length < 8) return "La contraseña debe tener al menos 8 caracteres"
@@ -58,6 +74,8 @@ export default function RegisterPage() {
         return ""
       case "confirmPassword":
         return value !== password ? "Las contraseñas no coinciden" : ""
+      case "storeId":
+        return value === "" ? "Debés seleccionar un local" : ""
       default:
         return ""
     }
@@ -75,10 +93,10 @@ export default function RegisterPage() {
 
     const newErrors: FieldErrors = {
       nombre: validateField("nombre", nombre),
-      legajo: validateField("legajo", legajo),
       email: validateField("email", email),
       password: validateField("password", password),
       confirmPassword: validateField("confirmPassword", confirmPassword),
+      storeId: validateField("storeId", storeId),
     }
     setErrors(newErrors)
 
@@ -93,10 +111,10 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: nombre.trim(),
-          legajo: legajo.trim(),
           email: email.toLowerCase().trim(),
           password,
           role,
+          storeId,
         }),
       })
 
@@ -109,7 +127,7 @@ export default function RegisterPage() {
       }
 
       dispatch({ type: "LOGIN", payload: data.user })
-      window.location.replace("/")
+      window.location.replace("/store-portal")
     } catch (err) {
       setErrors(prev => ({ ...prev, server: "Error de conexión" }))
       setLoading(false)
@@ -133,7 +151,7 @@ export default function RegisterPage() {
               </span>
             </h1>
             <p className="text-sm text-muted-foreground font-medium">
-              Creá tu cuenta universitaria
+              Registro para locales
             </p>
           </div>
 
@@ -155,7 +173,7 @@ export default function RegisterPage() {
                   if (submitted) setErrors((prev) => ({ ...prev, nombre: validateField("nombre", e.target.value) }))
                 }}
                 onBlur={(e) => handleBlur("nombre", e.target.value)}
-                placeholder="Nombre"
+                placeholder="Nombre del responsable"
                 autoComplete="name"
                 disabled={loading}
                 className="w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
@@ -167,25 +185,28 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {/* Legajo */}
+            {/* Local */}
             <div className="space-y-1.5">
-              <input
-                type="text"
-                value={legajo}
+              <select
+                value={storeId}
                 onChange={(e) => {
-                  setLegajo(e.target.value)
-                  if (submitted) setErrors((prev) => ({ ...prev, legajo: validateField("legajo", e.target.value) }))
+                  setStoreId(e.target.value)
+                  if (submitted) setErrors((prev) => ({ ...prev, storeId: validateField("storeId", e.target.value) }))
                 }}
-                onBlur={(e) => handleBlur("legajo", e.target.value)}
-                placeholder="Legajo (7 números)"
-                inputMode="numeric"
-                maxLength={7}
-                disabled={loading}
-                className="w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
-              />
-              {errors.legajo && (
+                onBlur={(e) => handleBlur("storeId", e.target.value)}
+                disabled={loading || loadingStores}
+                className="w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors appearance-none"
+              >
+                <option value="">Seleccioná tu local</option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.name}
+                  </option>
+                ))}
+              </select>
+              {errors.storeId && (
                 <p className="text-xs font-medium px-1" style={{ color: "#EF4444" }}>
-                  {errors.legajo}
+                  {errors.storeId}
                 </p>
               )}
             </div>
@@ -200,7 +221,7 @@ export default function RegisterPage() {
                   if (submitted) setErrors((prev) => ({ ...prev, email: validateField("email", e.target.value) }))
                 }}
                 onBlur={(e) => handleBlur("email", e.target.value)}
-                placeholder="usuario@uade.edu.ar"
+                placeholder="Email de contacto"
                 autoComplete="email"
                 inputMode="email"
                 disabled={loading}
@@ -269,15 +290,14 @@ export default function RegisterPage() {
               className="w-full rounded-2xl py-3.5 text-sm font-bold text-white transition-opacity active:opacity-80 disabled:opacity-50"
               style={{ backgroundColor: "#F97316" }}
             >
-              {loading ? "Creando cuenta..." : "Crear cuenta"}
+              {loading ? "Creando cuenta..." : "Crear cuenta de local"}
             </button>
           </form>
 
-          {/* Link to login and store register */}
           <div className="text-center space-y-3">
             <p className="text-sm text-muted-foreground">
-              ¿Sos un local?{" "}
-              <a href="/register/store" className="font-semibold" style={{ color: "#F97316" }}>
+              ¿Sos alumno?{" "}
+              <a href="/register" className="font-semibold" style={{ color: "#F97316" }}>
                 Registrate acá
               </a>
             </p>
