@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     if (isMP) {
       await db.order.updateMany({
         where: { userId: session.id, status: "pending_payment" },
-        data: { status: "cancelled" }
+        data: { status: "abandoned" }
       })
     }
 
