@@ -273,14 +273,8 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          {/* Link to login and store register */}
-          <div className="text-center space-y-3">
-            <p className="text-sm text-muted-foreground">
-              ¿Sos un local?{" "}
-              <a href="/register/store" className="font-semibold" style={{ color: "#F97316" }}>
-                Registrate acá
-              </a>
-            </p>
+          {/* Link to login */}
+          <div className="text-center">
             <p className="text-sm text-muted-foreground">
               ¿Ya tenés cuenta?{" "}
               <a href="/login" className="font-semibold" style={{ color: "#F97316" }}>
