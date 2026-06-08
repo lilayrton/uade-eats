@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, ChevronRight, MapPin, CheckCircle2, Loader2, Store, RefreshCw } from "lucide-react"
-import { toast } from "sonner"
+import { Bell, ChevronRight, MapPin, CheckCircle2, Loader2, Store } from "lucide-react"
 import { BottomNav } from "@/components/bottom-nav"
 import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
@@ -36,8 +35,6 @@ export default function OrdersPage() {
   const [activeNav] = useState("orders")
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null)
-  const [isCancelling, setIsCancelling] = useState(false)
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -86,7 +83,7 @@ export default function OrdersPage() {
   }, [fetchOrders])
 
   const activeOrders = orders.filter((o) =>
-    o.status === "pending" || o.status === "preparing" || o.status === "ready" || o.status === "pending_payment"
+    o.status === "pending" || o.status === "preparing" || o.status === "ready"
   )
   const pastOrders = orders.filter((o) => o.status === "completed" || o.status === "cancelled")
 
@@ -128,7 +125,6 @@ export default function OrdersPage() {
             ) : (
               <div className="space-y-3">
                 {activeOrders.map((order) => {
-                  const isPendingPayment = order.status === "pending_payment"
                   const step = stepIndex(order.status)
                   const isReady = order.status === "ready"
                   const storeCategory = order.store.category ?? ""
@@ -144,11 +140,9 @@ export default function OrdersPage() {
                       {/* Status bar */}
                       <div
                         className="px-4 py-2.5 flex items-center gap-2"
-                        style={{ backgroundColor: isPendingPayment ? "#FEF2F2" : isReady ? "#F0FDF4" : "#FFF7ED" }}
+                        style={{ backgroundColor: isReady ? "#F0FDF4" : "#FFF7ED" }}
                       >
-                        {isPendingPayment ? (
-                          <Loader2 size={15} style={{ color: "#EF4444" }} className="animate-spin" />
-                        ) : isReady ? (
+                        {isReady ? (
                           <CheckCircle2 size={15} style={{ color: "#16A34A" }} />
                         ) : (
                           <Loader2
@@ -159,9 +153,9 @@ export default function OrdersPage() {
                         )}
                         <span
                           className="text-xs font-bold"
-                          style={{ color: isPendingPayment ? "#EF4444" : isReady ? "#16A34A" : "#F97316" }}
+                          style={{ color: isReady ? "#16A34A" : "#F97316" }}
                         >
-                          {isPendingPayment ? "Pendiente de pago digital" : isReady ? "¡Listo para retirar!" : order.status === "pending" ? "Recibido" : "En preparación"}
+                          {isReady ? "¡Listo para retirar!" : order.status === "pending" ? "Recibido" : "En preparación"}
                         </span>
                       </div>
 
@@ -180,35 +174,8 @@ export default function OrdersPage() {
                           </span>
                         </div>
 
-                        {isPendingPayment ? (
-                          <div className="pt-1.5 pb-0.5 space-y-2">
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                              El pago digital no se pudo confirmar todavía. Podés intentar verificar el estado de tu pago, o cancelar este pedido e intentar nuevamente.
-                            </p>
-                            <div className="flex flex-col gap-2">
-                              <button
-                                onClick={() => {
-                                  toast.loading("Verificando estado del pago...")
-                                  router.push(`/checkout/success?orderId=${order.id}`)
-                                }}
-                                className="w-full bg-[#F97316] text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
-                              >
-                                <RefreshCw size={14} />
-                                Verificar estado del pago
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setCancelOrderId(order.id)
-                                }}
-                                className="w-full border border-red-200 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
-                              >
-                                Cancelar pedido
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          /* Step tracker */
-                          <div className="flex items-center gap-0">
+                        {/* Step tracker */}
+                        <div className="flex items-center gap-0">
                           {STEPS.map((label, i) => {
                             const done = i <= step
                             const isLast = i === STEPS.length - 1
@@ -217,38 +184,33 @@ export default function OrdersPage() {
                                 <div className="flex flex-col items-center gap-1 flex-1">
                                   <div
                                     className={cn(
-                                      "w-5 h-5 rounded-full flex items-center justify-center transition-colors duration-300",
-                                      done ? "text-white" : "bg-muted text-muted-foreground"
+                                      "w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors",
+                                      done ? "bg-[#F97316] border-[#F97316] text-white" : "bg-transparent border-muted text-muted-foreground"
                                     )}
-                                    style={done ? { backgroundColor: i === step && !isReady ? "#F97316" : i < step || isReady ? "#16A34A" : "#F97316" } : {}}
                                   >
-                                    {done ? (
-                                      i < step || isReady ? (
-                                        <CheckCircle2 size={14} />
-                                      ) : (
-                                        <span className="w-2 h-2 rounded-full bg-white" />
-                                      )
-                                    ) : (
-                                      <span className="w-2 h-2 rounded-full bg-muted-foreground/30" />
-                                    )}
+                                    {done ? <CheckCircle2 size={12} /> : <span className="text-[10px] font-bold">{i + 1}</span>}
                                   </div>
                                   <span
-                                    className={cn("text-[9px] font-medium text-center leading-tight", done ? "text-foreground" : "text-muted-foreground")}
+                                    className={cn(
+                                      "text-[10px] font-bold text-center",
+                                      done ? "text-foreground" : "text-muted-foreground"
+                                    )}
                                   >
                                     {label}
                                   </span>
                                 </div>
                                 {!isLast && (
-                                  <div
-                                    className="h-0.5 flex-1 -mt-4 mx-1 rounded-full transition-colors duration-300"
-                                    style={{ backgroundColor: i < step ? "#16A34A" : "var(--border)" }}
-                                  />
+                                  <div className="flex-1 h-[2px] -mt-4 bg-muted/60 relative">
+                                    <div
+                                      className="absolute top-0 left-0 bottom-0 bg-[#F97316] transition-all"
+                                      style={{ width: i < step ? "100%" : "0%" }}
+                                    />
+                                  </div>
                                 )}
                               </div>
                             )
                           })}
                         </div>
-                        )}
 
                         {/* Footer: pickup code + price */}
                         <div className="flex items-center justify-between pt-1 border-t border-border/40">
@@ -344,59 +306,6 @@ export default function OrdersPage() {
             if (id === "profile") router.push("/profile")
           }}
         />
-
-        {/* ── Cancel Order Modal ── */}
-        {cancelOrderId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
-              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4">
-                <span className="text-3xl">⚠️</span>
-              </div>
-              <h3 className="font-black text-xl text-[#1C1917] mb-2">¿Cancelar pedido?</h3>
-              <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                Esta acción no se puede deshacer. ¿Estás seguro de que querés cancelar tu pedido pendiente?
-              </p>
-              
-              <div className="w-full flex flex-col gap-3">
-                <button
-                  disabled={isCancelling}
-                  onClick={async () => {
-                    setIsCancelling(true)
-                    try {
-                      const res = await fetch(`/api/orders/${cancelOrderId}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ status: "cancelled" })
-                      })
-                      if (res.ok) {
-                        toast.success("Pedido cancelado exitosamente")
-                        setCancelOrderId(null)
-                        fetchOrders()
-                      } else {
-                        const err = await res.json()
-                        toast.error("Error al cancelar", { description: err.error || "Intenta de nuevo" })
-                      }
-                    } catch (e) {
-                      toast.error("Error de red", { description: "Revisá tu conexión" })
-                    } finally {
-                      setIsCancelling(false)
-                    }
-                  }}
-                  className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-2xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isCancelling ? <Loader2 size={18} className="animate-spin" /> : "Sí, cancelar pedido"}
-                </button>
-                <button
-                  disabled={isCancelling}
-                  onClick={() => setCancelOrderId(null)}
-                  className="w-full bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#1C1917] font-bold py-3.5 rounded-2xl transition-colors disabled:opacity-50"
-                >
-                  No, mantener pedido
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
