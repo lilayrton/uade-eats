@@ -1222,13 +1222,17 @@ export default function StorePortalPage() {
                                 })
                                 const data = await res.json()
                                 if (data.success) {
-                                  let updated = customCategories.map(c => c === cat ? val : c)
-                                  if (updated.indexOf(val) === -1 && customCategories.includes(cat)) {
-                                    updated.push(val)
-                                  }
-                                  updated = updated.filter(c => c !== cat)
-                                  setCustomCategories(updated)
-                                  localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+                                  setCustomCategories(prev => {
+                                    let updated = prev.map(c => c.trim().toLowerCase() === cat.trim().toLowerCase() ? val : c)
+                                    if (updated.indexOf(val) === -1 && prev.some(c => c.trim().toLowerCase() === cat.trim().toLowerCase())) {
+                                      updated.push(val)
+                                    }
+                                    updated = updated.filter(c => c.trim().toLowerCase() !== cat.trim().toLowerCase())
+                                    try {
+                                      localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+                                    } catch (e) {}
+                                    return updated
+                                  })
 
                                   toast.success("Categoría renombrada con éxito 🎉", { id: load })
                                   fetchProducts()
@@ -1272,9 +1276,13 @@ export default function StorePortalPage() {
                                   })
                                   const data = await res.json()
                                   if (data.success) {
-                                    const updated = customCategories.filter(c => c !== cat)
-                                    setCustomCategories(updated)
-                                    localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+                                    setCustomCategories(prev => {
+                                      const updated = prev.filter(c => c.trim().toLowerCase() !== cat.trim().toLowerCase())
+                                      try {
+                                        localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
+                                      } catch (e) {}
+                                      return updated
+                                    })
 
                                     toast.success("Categoría eliminada", { id: load })
                                     fetchProducts()
@@ -1284,7 +1292,7 @@ export default function StorePortalPage() {
                                   }
                                 } catch (e) {
                                   console.error(e)
-                                  toast.error("Error de red", { id: load })
+                                  toast.error("Error al eliminar", { id: load, description: "Revisá tu conexión" })
                                 }
                               }}
                               className="px-2 py-1 bg-red-500 text-white rounded-lg text-[9px] font-bold hover:bg-red-600 transition-colors"
