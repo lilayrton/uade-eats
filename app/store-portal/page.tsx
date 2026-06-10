@@ -53,12 +53,18 @@ interface Order {
   items: OrderItem[]
 }
 
+interface Category {
+  id: string
+  name: string
+}
+
 interface Product {
   id: string
   name: string
   description: string
   price: number
-  category: string
+  categoryId: string
+  category?: Category
   imageUrl: string
 }
 
@@ -80,46 +86,37 @@ export default function StorePortalPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [storeId, setStoreId] = useState<string | null>(null)
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
-  const [customCategories, setCustomCategories] = useState<string[]>([
-    "Menú del día",
-    "Platos",
-    "Plato principal",
-    "Platos principales",
-    "Salad bar",
-    "Postre",
-    "Cafetería",
-    "Bebidas",
-    "Budines y Scons",
-    "Snacks"
-  ])
+  const [customCategories, setCustomCategories] = useState<Category[]>([])
   const [newCatName, setNewCatName] = useState("")
-  const [renamingCat, setRenamingCat] = useState<string | null>(null)
+  const [renamingCat, setRenamingCat] = useState<Category | null>(null)
   const [renameInputVal, setRenameInputVal] = useState("")
-  const [deletingCat, setDeletingCat] = useState<string | null>(null)
+  const [deletingCat, setDeletingCat] = useState<Category | null>(null)
   const [showNewCatInput, setShowNewCatInput] = useState(false)
   const [newCatInputVal, setNewCatInputVal] = useState("")
 
-  // Load custom categories on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("uade-eats-custom-categories")
-    if (stored) {
-      try {
-        setCustomCategories(JSON.parse(stored))
-      } catch (e) {
-        console.error(e)
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/store-portal/categories")
+      const data = await res.json()
+      if (data.success) {
+        setCustomCategories(data.categories)
       }
+    } catch (e) {
+      console.error(e)
     }
   }, [])
 
-  const allCategories = Array.from(new Set([
-    ...customCategories,
-    ...products.map(p => p.category).filter(Boolean)
-  ])).sort()
+  useEffect(() => {
+    fetchCategories()
+  }, [fetchCategories])
+
+  // allCategories is now just the customCategories directly from DB
+  const allCategories = customCategories
 
   // Product Form State
   const [prodName, setProdName] = useState("")
   const [prodPrice, setProdPrice] = useState("")
-  const [prodCategory, setProdCategory] = useState("")
+  const [prodCategory, setProdCategory] = useState("") // this will hold categoryId
   const [prodDescription, setProdDescription] = useState("")
   const [prodImageUrl, setProdImageUrl] = useState("")
 
@@ -248,14 +245,14 @@ export default function StorePortalPage() {
       setEditingProduct(product)
       setProdName(product.name)
       setProdPrice(product.price.toString())
-      setProdCategory(product.category)
+      setProdCategory(product.categoryId)
       setProdDescription(product.description)
       setProdImageUrl(product.imageUrl)
     } else {
       setEditingProduct(null)
       setProdName("")
       setProdPrice("")
-      setProdCategory("Menú del día")
+      setProdCategory("")
       setProdDescription("")
       setProdImageUrl("")
     }
@@ -274,7 +271,7 @@ export default function StorePortalPage() {
       name: prodName,
       price: parseFloat(prodPrice),
       description: prodDescription,
-      category: prodCategory,
+      categoryId: prodCategory,
       imageUrl: prodImageUrl || "/images/placeholder.jpg"
     }
 
@@ -838,7 +835,7 @@ export default function StorePortalPage() {
                           </div>
                         )}
                         <span className="absolute top-1 left-1 text-[9px] font-black uppercase bg-[#F97316] text-white px-1.5 py-0.5 rounded-lg shadow-sm">
-                          {product.category}
+                          {product.category?.name || "Sin categoría"}
                         </span>
                       </div>
 
@@ -980,22 +977,39 @@ export default function StorePortalPage() {
                       />
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           const val = newCatInputVal.trim()
                           if (!val) return
-                          if (allCategories.includes(val)) {
-                            setProdCategory(val)
+                          
+                          const existingCat = allCategories.find(c => c.name.toLowerCase() === val.toLowerCase())
+                          if (existingCat) {
+                            setProdCategory(existingCat.id)
                             setShowNewCatInput(false)
                             setNewCatInputVal("")
                             return
                           }
-                          const updated = [...customCategories, val]
-                          setCustomCategories(updated)
-                          localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
-                          setProdCategory(val)
-                          setShowNewCatInput(false)
-                          setNewCatInputVal("")
-                          toast.success(`Categoría "${val}" creada y seleccionada 🎉`)
+
+                          const loadingToast = toast.loading("Creando categoría...")
+                          try {
+                            const res = await fetch("/api/store-portal/categories", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "create", name: val })
+                            })
+                            const data = await res.json()
+                            if (data.success) {
+                              setCustomCategories(prev => [...prev, data.category])
+                              setProdCategory(data.category.id)
+                              setShowNewCatInput(false)
+                              setNewCatInputVal("")
+                              toast.success(`Categoría "${val}" creada y seleccionada 🎉`, { id: loadingToast })
+                            } else {
+                              toast.error(data.error, { id: loadingToast })
+                            }
+                          } catch (e) {
+                            console.error(e)
+                            toast.error("Error de red", { id: loadingToast })
+                          }
                         }}
                         className="bg-[#F97316] hover:bg-[#EA580C] text-white text-xs font-bold px-3 py-2 rounded-2xl transition-colors active:scale-95 shrink-0"
                       >
@@ -1011,7 +1025,7 @@ export default function StorePortalPage() {
                     >
                       <option value="">Selecciona una categoría...</option>
                       {allCategories.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
                     </select>
                   )}
@@ -1181,13 +1195,13 @@ export default function StorePortalPage() {
               {/* List of active categories */}
               <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
                 {allCategories.map((cat) => {
-                  const prodCount = products.filter(p => p.category === cat).length
-                  const isRenaming = renamingCat === cat
-                  const isDeleting = deletingCat === cat
+                  const prodCount = products.filter(p => p.categoryId === cat.id).length
+                  const isRenaming = renamingCat?.id === cat.id
+                  const isDeleting = deletingCat?.id === cat.id
 
                   return (
                     <div
-                      key={cat}
+                      key={cat.id}
                       className="flex items-center justify-between p-3 rounded-2xl border border-[#F3F4F6] bg-[#F9F5F0] hover:bg-[#F3E8FF]/30 transition-all duration-200"
                     >
                       {isRenaming ? (
@@ -1202,7 +1216,7 @@ export default function StorePortalPage() {
                           <button
                             onClick={async () => {
                               const val = renameInputVal.trim()
-                              if (!val || val === cat) {
+                              if (!val || val === cat.name) {
                                 setRenamingCat(null)
                                 return
                               }
@@ -1213,24 +1227,13 @@ export default function StorePortalPage() {
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({
                                     action: "rename",
-                                    oldCategory: cat,
-                                    newCategory: val
+                                    id: cat.id,
+                                    newName: val
                                   })
                                 })
                                 const data = await res.json()
                                 if (data.success) {
-                                  setCustomCategories(prev => {
-                                    let updated = prev.map(c => c.trim().toLowerCase() === cat.trim().toLowerCase() ? val : c)
-                                    if (updated.indexOf(val) === -1 && prev.some(c => c.trim().toLowerCase() === cat.trim().toLowerCase())) {
-                                      updated.push(val)
-                                    }
-                                    updated = updated.filter(c => c.trim().toLowerCase() !== cat.trim().toLowerCase())
-                                    try {
-                                      localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
-                                    } catch (e) {}
-                                    return updated
-                                  })
-
+                                  setCustomCategories(prev => prev.map(c => c.id === cat.id ? { ...c, name: val } : c))
                                   toast.success("Categoría renombrada con éxito 🎉", { id: load })
                                   fetchProducts()
                                   setRenamingCat(null)
@@ -1257,7 +1260,7 @@ export default function StorePortalPage() {
                         </div>
                       ) : isDeleting ? (
                         <div className="flex-1 flex items-center justify-between gap-2 bg-red-50/50 p-1.5 rounded-xl animate-in fade-in duration-200">
-                          <span className="text-[10px] text-red-600 font-bold leading-tight">¿Reasignar platos a "Sin categoría"?</span>
+                          <span className="text-[10px] text-red-600 font-bold leading-tight">¿Eliminar categoría permanentemente?</span>
                           <div className="flex gap-1 shrink-0">
                             <button
                               onClick={async () => {
@@ -1268,19 +1271,12 @@ export default function StorePortalPage() {
                                     headers: { "Content-Type": "application/json" },
                                     body: JSON.stringify({
                                       action: "delete",
-                                      oldCategory: cat
+                                      id: cat.id
                                     })
                                   })
                                   const data = await res.json()
                                   if (data.success) {
-                                    setCustomCategories(prev => {
-                                      const updated = prev.filter(c => c.trim().toLowerCase() !== cat.trim().toLowerCase())
-                                      try {
-                                        localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
-                                      } catch (e) {}
-                                      return updated
-                                    })
-
+                                    setCustomCategories(prev => prev.filter(c => c.id !== cat.id))
                                     toast.success("Categoría eliminada", { id: load })
                                     fetchProducts()
                                     setDeletingCat(null)
@@ -1307,25 +1303,24 @@ export default function StorePortalPage() {
                       ) : (
                         <>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#1C1917] text-xs">{cat}</span>
+                            <span className="font-bold text-[#1C1917] text-xs">{cat.name}</span>
                             <span className="text-[10px] bg-white text-muted-foreground border px-2 py-0.5 rounded-full font-bold">
                               {prodCount} {prodCount === 1 ? "plato" : "platos"}
                             </span>
                           </div>
 
-                          {cat !== "Sin categoría" && (
-                            <div className="flex items-center gap-1.5">
-                              {/* Rename */}
-                              <button
-                                onClick={() => {
-                                  setRenamingCat(cat)
-                                  setRenameInputVal(cat)
-                                }}
-                                className="p-1.5 hover:bg-white rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                                title="Renombrar categoría"
-                              >
-                                <Edit2 size={12} />
-                              </button>
+                          <div className="flex items-center gap-1.5">
+                            {/* Rename */}
+                            <button
+                              onClick={() => {
+                                setRenamingCat(cat)
+                                setRenameInputVal(cat.name)
+                              }}
+                              className="p-1.5 hover:bg-white rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                              title="Renombrar categoría"
+                            >
+                              <Edit2 size={12} />
+                            </button>
 
                               {/* Delete / Reset */}
                               <button
@@ -1338,7 +1333,6 @@ export default function StorePortalPage() {
                                 <Trash2 size={12} />
                               </button>
                             </div>
-                          )}
                         </>
                       )}
                     </div>

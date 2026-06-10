@@ -2,6 +2,34 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 
+export async function GET(req: Request) {
+  try {
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: session.id },
+      select: { role: true, storeId: true }
+    })
+
+    if (!user || user.role !== "store_owner" || !user.storeId) {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 })
+    }
+
+    const categories = await db.category.findMany({
+      where: { storeId: user.storeId },
+      orderBy: { name: 'asc' }
+    })
+
+    return NextResponse.json({ success: true, categories })
+  } catch (error) {
+    console.error("Error fetching categories:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getSession()
@@ -15,50 +43,46 @@ export async function POST(req: Request) {
     })
 
     if (!user || user.role !== "store_owner" || !user.storeId) {
-      return NextResponse.json({ error: "Acceso denegado. Se requiere cuenta de Comedor" }, { status: 403 })
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 })
     }
 
-    const { action, oldCategory, newCategory } = await req.json()
+    const { action, name, id, newName } = await req.json()
 
-    if (action === "rename") {
-      if (!oldCategory || !newCategory) {
-        return NextResponse.json({ error: "Faltan parámetros de renombrado" }, { status: 400 })
-      }
-
-      // Bulk update all matching products
-      const result = await db.product.updateMany({
-        where: {
-          storeId: user.storeId,
-          category: oldCategory.trim()
-        },
+    if (action === "create") {
+      if (!name) return NextResponse.json({ error: "Falta el nombre" }, { status: 400 })
+      
+      const category = await db.category.create({
         data: {
-          category: newCategory.trim()
+          name: name.trim(),
+          storeId: user.storeId
         }
       })
-
-      return NextResponse.json({ success: true, count: result.count })
-    } else if (action === "delete") {
-      if (!oldCategory) {
-        return NextResponse.json({ error: "Falta el nombre de la categoría a eliminar" }, { status: 400 })
-      }
-
-      // Set category of these products to "Sin categoría"
-      const result = await db.product.updateMany({
-        where: {
-          storeId: user.storeId,
-          category: oldCategory.trim()
-        },
-        data: {
-          category: "Sin categoría"
-        }
+      return NextResponse.json({ success: true, category })
+    } 
+    else if (action === "rename") {
+      if (!id || !newName) return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 })
+      
+      const category = await db.category.update({
+        where: { id, storeId: user.storeId },
+        data: { name: newName.trim() }
       })
-
-      return NextResponse.json({ success: true, count: result.count })
+      return NextResponse.json({ success: true, category })
+    } 
+    else if (action === "delete") {
+      if (!id) return NextResponse.json({ error: "Falta el ID" }, { status: 400 })
+      
+      await db.category.delete({
+        where: { id, storeId: user.storeId }
+      })
+      return NextResponse.json({ success: true })
     }
 
     return NextResponse.json({ error: "Acción no válida" }, { status: 400 })
-  } catch (error) {
-    console.error("Error managing categories in bulk:", error)
+  } catch (error: any) {
+    console.error("Error managing categories:", error)
+    if (error.code === 'P2002') {
+      return NextResponse.json({ error: "Ya existe una categoría con ese nombre" }, { status: 400 })
+    }
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }

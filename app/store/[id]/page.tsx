@@ -9,7 +9,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
   const { id } = await params
   const storeData = await db.store.findUnique({
     where: { id },
-    include: { products: true }
+    include: { products: { include: { category: true } } }
   })
 
   if (!storeData) {
@@ -35,7 +35,11 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
     name: p.name,
     description: p.description,
     price: p.price,
-    category: p.category as any, // Type cast since db category is string and Product category is union
+    categoryId: p.categoryId || "0",
+    category: {
+      id: p.category?.id || "0",
+      name: p.category?.name || "Sin categoría"
+    },
     imageUrl: p.imageUrl,
   }))
 

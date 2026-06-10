@@ -29,20 +29,35 @@ model Store {
   estimatedWaitMinutes Int
   isOpen               Boolean   @default(true)
   rating               Float
-  createdAt            DateTime  @default(now())
+  createdAt            DateTime   @default(now())
   products             Product[]
   orders               Order[]
   users                User[]
+  categories           Category[]
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  storeId   String
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime  @default(now())
+  products  Product[]
+
+  @@unique([storeId, name])
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   storeId     String
-  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name        String
   description String
   price       Float
-  category    String
+  
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   imageUrl    String
   createdAt   DateTime @default(now())
   orderItems  OrderItem[]

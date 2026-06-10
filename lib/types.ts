@@ -28,7 +28,8 @@ export interface Product {
   name: string
   description: string
   price: number
-  category: ProductCategory
+  categoryId: string
+  category: { id: string; name: string }
   imageUrl: string
 }
 

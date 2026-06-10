@@ -21,9 +21,11 @@ export async function GET() {
     const products = await db.product.findMany({
       where: { storeId: user.storeId },
       orderBy: [
-        { category: "asc" },
         { name: "asc" }
-      ]
+      ],
+      include: {
+        category: true
+      }
     })
 
     return NextResponse.json({ success: true, products })
@@ -49,8 +51,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Acceso denegado. Se requiere cuenta de Comedor" }, { status: 403 })
     }
 
-    const { name, price, description, category, imageUrl } = await req.json()
-    if (!name || price === undefined || !category) {
+    const { name, price, description, categoryId, imageUrl } = await req.json()
+    if (!name || price === undefined || !categoryId) {
       return NextResponse.json({ error: "Nombre, precio y categoría requeridos" }, { status: 400 })
     }
 
@@ -60,7 +62,7 @@ export async function POST(req: Request) {
         name: name.trim(),
         price: parseFloat(price),
         description: (description || "").trim(),
-        category: category.trim(),
+        categoryId: categoryId,
         imageUrl: (imageUrl || "/images/placeholder.jpg").trim()
       }
     })
@@ -88,8 +90,8 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Acceso denegado. Se requiere cuenta de Comedor" }, { status: 403 })
     }
 
-    const { id, name, price, description, category, imageUrl } = await req.json()
-    if (!id || !name || price === undefined || !category) {
+    const { id, name, price, description, categoryId, imageUrl } = await req.json()
+    if (!id || !name || price === undefined || !categoryId) {
       return NextResponse.json({ error: "Datos del producto incompletos" }, { status: 400 })
     }
 
@@ -108,7 +110,7 @@ export async function PUT(req: Request) {
         name: name.trim(),
         price: parseFloat(price),
         description: (description || "").trim(),
-        category: category.trim(),
+        categoryId: categoryId,
         imageUrl: (imageUrl || "/images/placeholder.jpg").trim()
       }
     })

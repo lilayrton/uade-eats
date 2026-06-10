@@ -22,14 +22,14 @@ export default function StorePageClient({ storeData, storeProducts }: StorePageC
   const [pendingAddProduct, setPendingAddProduct] = useState<Product | null>(null)
 
   const categories = useMemo(
-    () => Array.from(new Set(storeProducts.map((p) => p.category))),
+    () => Array.from(new Set(storeProducts.map((p) => p.category.name))),
     [storeProducts]
   )
 
   const [activeCategory, setActiveCategory] = useState(categories[0] || "Bebidas")
 
   const visibleProducts = useMemo(
-    () => storeProducts.filter((p) => p.category === activeCategory),
+    () => storeProducts.filter((p) => p.category.name === activeCategory),
     [storeProducts, activeCategory]
   )
 
