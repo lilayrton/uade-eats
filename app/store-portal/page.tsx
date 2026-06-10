@@ -151,7 +151,7 @@ export default function StorePortalPage() {
   const fetchProducts = useCallback(async () => {
     setProductsLoading(true)
     try {
-      const res = await fetch("/api/store-portal/products")
+      const res = await fetch(`/api/store-portal/products?t=${Date.now()}`, { cache: "no-store" })
       const data = await res.json()
       if (data.success) {
         setProducts(data.products)
@@ -1308,30 +1308,32 @@ export default function StorePortalPage() {
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5">
-                            {/* Rename */}
-                            <button
-                              onClick={() => {
-                                setRenamingCat(cat)
-                                setRenameInputVal(cat)
-                              }}
-                              className="p-1.5 hover:bg-white rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                              title="Renombrar categoría"
-                            >
-                              <Edit2 size={12} />
-                            </button>
+                          {cat !== "Sin categoría" && (
+                            <div className="flex items-center gap-1.5">
+                              {/* Rename */}
+                              <button
+                                onClick={() => {
+                                  setRenamingCat(cat)
+                                  setRenameInputVal(cat)
+                                }}
+                                className="p-1.5 hover:bg-white rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                                title="Renombrar categoría"
+                              >
+                                <Edit2 size={12} />
+                              </button>
 
-                            {/* Delete / Reset */}
-                            <button
-                              onClick={() => {
-                                setDeletingCat(cat)
-                              }}
-                              className="p-1.5 hover:bg-white rounded-lg text-red-500 hover:text-red-700 transition-colors"
-                              title="Eliminar categoría"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
+                              {/* Delete / Reset */}
+                              <button
+                                onClick={() => {
+                                  setDeletingCat(cat)
+                                }}
+                                className="p-1.5 hover:bg-white rounded-lg text-red-500 hover:text-red-700 transition-colors"
+                                title="Eliminar categoría"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
