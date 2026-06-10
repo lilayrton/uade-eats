@@ -42,6 +42,19 @@ export default function PersonalInfoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName })
       })
+      
+      if (!res.ok) {
+        // Try to parse JSON error, if it's not JSON it will throw and go to catch
+        const text = await res.text()
+        try {
+          const data = JSON.parse(text)
+          toast.error(data.error || "Error al guardar", { id: loadId })
+        } catch {
+          toast.error("Error del servidor o versión desactualizada", { id: loadId })
+        }
+        return
+      }
+
       const data = await res.json()
       
       if (data.success) {
