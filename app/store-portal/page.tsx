@@ -1173,18 +1173,35 @@ export default function StorePortalPage() {
                   className="flex-1 rounded-2xl border border-border bg-card px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40 focus:border-[#F97316] transition-colors"
                 />
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const name = newCatName.trim()
                     if (!name) return
-                    if (allCategories.includes(name)) {
+                    
+                    const existingCat = allCategories.find(c => c.name.toLowerCase() === name.toLowerCase())
+                    if (existingCat) {
                       toast.error("La categoría ya existe")
                       return
                     }
-                    const updated = [...customCategories, name]
-                    setCustomCategories(updated)
-                    localStorage.setItem("uade-eats-custom-categories", JSON.stringify(updated))
-                    setNewCatName("")
-                    toast.success("Categoría agregada")
+
+                    const loadingToast = toast.loading("Creando categoría...")
+                    try {
+                      const res = await fetch("/api/store-portal/categories", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "create", name })
+                      })
+                      const data = await res.json()
+                      if (data.success) {
+                        setCustomCategories(prev => [...prev, data.category])
+                        setNewCatName("")
+                        toast.success(`Categoría "${name}" agregada 🎉`, { id: loadingToast })
+                      } else {
+                        toast.error(data.error, { id: loadingToast })
+                      }
+                    } catch (e) {
+                      console.error(e)
+                      toast.error("Error de red", { id: loadingToast })
+                    }
                   }}
                   className="bg-[#F97316] hover:bg-[#EA580C] text-white text-xs font-bold py-2.5 px-4 rounded-2xl transition-colors active:scale-95 shrink-0"
                 >
