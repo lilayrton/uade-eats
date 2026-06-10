@@ -80,7 +80,18 @@ export default function StorePortalPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [storeId, setStoreId] = useState<string | null>(null)
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
-  const [customCategories, setCustomCategories] = useState<string[]>([])
+  const [customCategories, setCustomCategories] = useState<string[]>([
+    "Menú del día",
+    "Platos",
+    "Plato principal",
+    "Platos principales",
+    "Salad bar",
+    "Postre",
+    "Cafetería",
+    "Bebidas",
+    "Budines y Scons",
+    "Snacks"
+  ])
   const [newCatName, setNewCatName] = useState("")
   const [renamingCat, setRenamingCat] = useState<string | null>(null)
   const [renameInputVal, setRenameInputVal] = useState("")
@@ -100,21 +111,7 @@ export default function StorePortalPage() {
     }
   }, [])
 
-  const DEFAULT_CATEGORIES = [
-    "Menú del día",
-    "Platos",
-    "Plato principal",
-    "Platos principales",
-    "Salad bar",
-    "Postre",
-    "Cafetería",
-    "Bebidas",
-    "Budines y Scons",
-    "Snacks"
-  ]
-
   const allCategories = Array.from(new Set([
-    ...DEFAULT_CATEGORIES,
     ...customCategories,
     ...products.map(p => p.category).filter(Boolean)
   ])).sort()
