@@ -16,7 +16,7 @@ export default function PersonalInfoPage() {
     : "?"
 
   const roleLabel =
-    user?.role === "faculty" ? "Docente" : user?.role === "staff" ? "Staff" : "Estudiante"
+    user?.role === "store_owner" ? "Vendedor" : user?.role === "faculty" ? "Docente" : user?.role === "staff" ? "Staff" : "Estudiante"
 
   const [name, setName] = useState(user?.name ?? "")
 
