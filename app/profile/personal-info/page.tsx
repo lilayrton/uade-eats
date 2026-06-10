@@ -20,8 +20,42 @@ export default function PersonalInfoPage() {
 
   const [name, setName] = useState(user?.name ?? "")
 
-  const handleSave = () => {
-    toast.success("Cambios guardados ✓")
+  const [loading, setLoading] = useState(false)
+
+  const handleSave = async () => {
+    const newName = name.trim()
+    if (!newName) {
+      toast.error("El nombre no puede estar vacío")
+      return
+    }
+
+    if (newName === user?.name) {
+      toast.success("Cambios guardados ✓")
+      return
+    }
+
+    setLoading(true)
+    const loadId = toast.loading("Guardando...")
+    try {
+      const res = await fetch("/api/user", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName })
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        dispatch({ type: "SET_USER", payload: data.user })
+        toast.success("Cambios guardados ✓", { id: loadId })
+      } else {
+        toast.error(data.error || "Error al guardar", { id: loadId })
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error("Error de conexión", { id: loadId })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -111,10 +145,11 @@ export default function PersonalInfoPage() {
         {/* Save button */}
         <button
           onClick={handleSave}
-          className="w-full py-3 rounded-xl font-semibold text-white text-sm"
+          disabled={loading}
+          className="w-full py-3 rounded-xl font-semibold text-white text-sm disabled:opacity-50"
           style={{ backgroundColor: "#F97316" }}
         >
-          Guardar cambios
+          {loading ? "Guardando..." : "Guardar cambios"}
         </button>
       </div>
     </div>
