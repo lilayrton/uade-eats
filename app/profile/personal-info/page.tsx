@@ -8,7 +8,7 @@ import { toast } from "sonner"
 
 export default function PersonalInfoPage() {
   const router = useRouter()
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const user = state.user
 
   const initials = user
@@ -63,9 +63,9 @@ export default function PersonalInfoPage() {
       } else {
         toast.error(data.error || "Error al guardar", { id: loadId })
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e)
-      toast.error("Error de conexión", { id: loadId })
+      toast.error(`Error: ${e?.message || e?.toString() || "Desconocido"}`, { id: loadId, duration: 10000 })
     } finally {
       setLoading(false)
     }
