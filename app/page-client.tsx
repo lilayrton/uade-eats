@@ -247,7 +247,7 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
               >
                 <div className="flex-1">
                   <p className="text-white font-bold text-base leading-tight text-balance">
-                    ¡Primera orden gratis!
+                    ¡Obtené 20% de descuento!
                   </p>
                   <p className="text-orange-100 text-xs mt-1 leading-relaxed">
                     Usá el código <span className="font-bold text-white">UADE2026</span> en tu primer pedido
