@@ -181,7 +181,8 @@ export default function CheckoutPage() {
             toast.success("Redirigiendo a Mercado Pago...")
             window.location.href = data.initPoint
             // Si el usuario vuelve con la flecha de atrás, rehabilitamos el botón
-            setTimeout(() => setIsProcessing(false), 2000)
+            // Comentado: para que se mantenga el estado de loading.
+            // setTimeout(() => setIsProcessing(false), 2000)
           }
         } else if (selectedPayment !== "mercadopago") {
           router.push("/orders")
