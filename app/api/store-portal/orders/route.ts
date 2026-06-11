@@ -89,6 +89,7 @@ export async function PATCH(req: Request) {
         user: {
           select: { name: true, email: true }
         },
+        store: true,
         items: {
           include: {
             product: {
