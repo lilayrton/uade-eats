@@ -78,6 +78,8 @@ export default function StorePortalPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<"active" | "completed" | "products">("active")
   const [selectedFilter, setSelectedFilter] = useState<"all" | "pending" | "preparing" | "ready">("all")
+  const [isOpen, setIsOpen] = useState(true)
+  const [statusLoading, setStatusLoading] = useState(false)
 
   // Products State
   const [products, setProducts] = useState<Product[]>([])
@@ -106,9 +108,22 @@ export default function StorePortalPage() {
     }
   }, [])
 
+  const fetchStoreStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/store-portal/status")
+      const data = await res.json()
+      if (data.success) {
+        setIsOpen(data.isOpen)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }, [])
+
   useEffect(() => {
     fetchCategories()
-  }, [fetchCategories])
+    fetchStoreStatus()
+  }, [fetchCategories, fetchStoreStatus])
 
   // allCategories is now just the customCategories directly from DB
   const allCategories = customCategories
@@ -392,6 +407,51 @@ export default function StorePortalPage() {
             </div>
           </div>
 
+          {/* Status Toggle */}
+          <div className="pt-2 border-t border-[#F3F4F6] flex items-center justify-between mt-2">
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-foreground">Estado del local</span>
+              <span className="text-xs text-muted-foreground">
+                {isOpen ? "Abierto (recibiendo pedidos)" : "Cerrado (oculto para alumnos)"}
+              </span>
+            </div>
+            <button
+              onClick={async () => {
+                setStatusLoading(true)
+                const newStatus = !isOpen
+                setIsOpen(newStatus)
+                try {
+                  const res = await fetch("/api/store-portal/status", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ isOpen: newStatus })
+                  })
+                  const data = await res.json()
+                  if (!data.success) {
+                    setIsOpen(!newStatus)
+                    toast.error("Error al actualizar estado")
+                  } else {
+                    toast.success(newStatus ? "Local abierto" : "Local cerrado")
+                  }
+                } catch (e) {
+                  setIsOpen(!newStatus)
+                  toast.error("Error de conexión")
+                } finally {
+                  setStatusLoading(false)
+                }
+              }}
+              disabled={statusLoading}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                isOpen ? "bg-[#F97316]" : "bg-muted-foreground/30"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isOpen ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
           {/* ── KPIs Bar (Hidden on Products View) ── */}
           {activeTab !== "products" && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">

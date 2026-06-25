@@ -52,7 +52,7 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
         normalizedSearch.trim() === "" ||
         store.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
         store.tagline.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch)
-      const matchOpen = !onlyOpen || store.isOpen
+      const matchOpen = store.isOpen
       return matchFilter && matchSearch && matchOpen
     })
 
