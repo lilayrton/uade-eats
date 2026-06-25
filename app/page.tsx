@@ -2,8 +2,8 @@ import { db } from "@/lib/db"
 import HomePageClient from "./page-client"
 import { Store } from "@/lib/types"
 
-// Revalidate every 60 seconds or make it dynamic if we need real-time open status
-export const revalidate = 60
+// Force dynamic so open/closed status is always real-time
+export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const storesData = await db.store.findMany({

@@ -110,7 +110,7 @@ export default function StorePortalPage() {
 
   const fetchStoreStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/store-portal/status")
+      const res = await fetch(`/api/store-portal/status?t=${Date.now()}`, { cache: "no-store" })
       const data = await res.json()
       if (data.success) {
         setIsOpen(data.isOpen)

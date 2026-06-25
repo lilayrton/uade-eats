@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import StorePageClient from "./page-client"
 import { Store, Product } from "@/lib/types"
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
