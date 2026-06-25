@@ -9,6 +9,7 @@ import { CategoryTabs } from "@/components/category-tabs"
 import { BottomNav } from "@/components/bottom-nav"
 import type { Product, Store } from "@/lib/types"
 import { useApp } from "@/context/AppContext"
+import { toast } from "sonner"
 
 interface StorePageClientProps {
   storeData: Store
@@ -46,13 +47,17 @@ export default function StorePageClient({ storeData, storeProducts }: StorePageC
 
   const handleAdd = useCallback(
     (product: Product) => {
+      if (!storeData.isOpen) {
+        toast.error("El local está cerrado, no se pueden agregar productos.")
+        return
+      }
       if (state.cart.storeId !== null && state.cart.storeId !== storeData.id) {
         setPendingAddProduct(product)
         return
       }
       dispatch({ type: "ADD_TO_CART", payload: { product, storeId: storeData.id, storeName: storeData.name } })
     },
-    [dispatch, storeData.id, storeData.name, state.cart.storeId]
+    [dispatch, storeData.id, storeData.name, state.cart.storeId, storeData.isOpen]
   )
 
   const handleRemove = useCallback(
@@ -142,6 +147,25 @@ export default function StorePageClient({ storeData, storeProducts }: StorePageC
               </div>
             </div>
           </div>
+
+          {/* Warning Banner */}
+          {!storeData.isOpen && (
+            <div className="mx-4 mt-4 bg-red-50 border border-red-200 rounded-2xl p-4 flex gap-3 items-start">
+              <div className="shrink-0 mt-0.5 text-red-500">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-red-800">El local acaba de cerrar</h3>
+                <p className="text-xs text-red-700 mt-1 leading-relaxed">
+                  Ya no se pueden hacer pedidos por ahora. Probá buscar otra opción disponible en la página principal.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Product list */}
           <section className="px-4 pt-5">

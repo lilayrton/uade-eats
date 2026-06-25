@@ -412,7 +412,7 @@ export default function StorePortalPage() {
             <div className="flex flex-col">
               <span className="text-sm font-bold text-foreground">Estado del local</span>
               <span className="text-xs text-muted-foreground">
-                {isOpen ? "Abierto (recibiendo pedidos)" : "Cerrado (oculto para alumnos)"}
+                {isOpen ? "Abierto (recibiendo pedidos)" : "Cerrado"}
               </span>
             </div>
             <button
