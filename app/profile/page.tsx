@@ -216,6 +216,7 @@ export default function ProfilePage() {
             if (id === "home") router.push("/")
             if (id === "cart") router.push("/cart")
             if (id === "orders") router.push("/orders")
+            if (id === "wallet") router.push("/wallet")
           }}
         />
       </div>

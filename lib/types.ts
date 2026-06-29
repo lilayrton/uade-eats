@@ -1,13 +1,4 @@
-export type ProductCategory =
-  | "Bebidas"
-  | "Sándwiches"
-  | "Snacks"
-  | "Postres"
-  | "Medialunas"
-
-export type OrderStatus = "pending" | "preparing" | "ready" | "completed"
-
-export type PaymentMethod = "mercadopago" | "efectivo"
+export type OrderStatus = "pending" | "preparing" | "ready" | "completed" | "cancelled"
 
 export type AuthStatus = "unauthenticated" | "authenticated"
 
@@ -39,22 +30,58 @@ export interface CartItem {
   storeId: string
 }
 
-export interface Order {
+interface OrderItem {
   id: string
+  quantity: number
+  unitPrice: number
+  product: {
+    name: string
+    imageUrl: string
+  }
+}
+
+export interface UserOrder {
+  id: string
+  userId: string
   storeId: string
-  storeName: string
-  items: CartItem[]
   total: number
   status: OrderStatus
+  paymentMethod: string
   pickupCode: number
-  createdAt: number
+  notes?: string | null
+  createdAt: string
+  updatedAt: string
+  store: { id: string; name: string }
+  user: {
+    name: string
+    email: string
+  }
+  items: OrderItem[]
+}
+
+export interface Order {
+  id: string
+  userId: string
+  storeId: string
+  total: number
+  status: OrderStatus
+  paymentMethod: string
+  pickupCode: number
+  notes?: string | null
+  createdAt: string
+  updatedAt: string
+  user: {
+    name: string
+    email: string
+  }
+  items: OrderItem[]
 }
 
 export interface User {
   id: string
   name: string
   email: string
-  role: "student" | "faculty" | "staff"
+  role: "student" | "faculty" | "store_owner"
 }
 
 export type Notification = {

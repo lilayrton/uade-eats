@@ -1,13 +1,14 @@
 "use client"
 
-import { Home, ClipboardList, ShoppingCart, User } from "lucide-react"
+import { Home, ClipboardList, ShoppingCart, User as UserIcon, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const NAV_ITEMS = [
   { id: "home", label: "Inicio", icon: Home },
   { id: "orders", label: "Pedidos", icon: ClipboardList },
   { id: "cart", label: "Carrito", icon: ShoppingCart },
-  { id: "profile", label: "Perfil", icon: User },
+  { id: "wallet", label: "Wallet", icon: Wallet },
+  { id: "profile", label: "Perfil", icon: UserIcon },
 ]
 
 interface BottomNavProps {
@@ -35,7 +36,7 @@ export function BottomNav({ active, onChange, cartCount = 0, cartBump = false }:
           >
             <div className="relative">
               <Icon
-                size={22}
+                size={20}
                 strokeWidth={isActive ? 2.5 : 1.75}
               />
               {id === "cart" && cartCount > 0 && (
@@ -50,7 +51,7 @@ export function BottomNav({ active, onChange, cartCount = 0, cartBump = false }:
                 </span>
               )}
             </div>
-            <span className={cn("text-[10px] font-medium leading-none", isActive && "font-bold")}>
+            <span className={cn("text-[9px] font-medium leading-none", isActive && "font-bold")}>
               {label}
             </span>
           </button>

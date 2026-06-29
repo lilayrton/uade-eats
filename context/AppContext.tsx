@@ -14,12 +14,8 @@ import type {
   User,
   Product,
   CartItem,
-  Order,
-  OrderStatus,
-  PaymentMethod,
   Notification,
 } from "@/lib/types"
-import { MOCK_USER, registerUser, findUserByEmail } from "@/lib/mock-data"
 
 // ---------------------------------------------------------------------------
 // State
@@ -82,7 +78,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case "REGISTER": {
-      registerUser(action.payload.user)
       return { ...state, user: action.payload.user, authStatus: "authenticated" }
     }
 

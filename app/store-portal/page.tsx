@@ -22,36 +22,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/context/AppContext"
-
-type OrderStatus = "pending" | "preparing" | "ready" | "completed" | "cancelled"
-
-interface OrderItem {
-  id: string
-  quantity: number
-  unitPrice: number
-  product: {
-    name: string
-    imageUrl: string
-  }
-}
-
-interface Order {
-  id: string
-  userId: string
-  storeId: string
-  total: number
-  status: OrderStatus
-  paymentMethod: string
-  pickupCode: number
-  notes?: string | null
-  createdAt: string
-  updatedAt: string
-  user: {
-    name: string
-    email: string
-  }
-  items: OrderItem[]
-}
+import type { Order, OrderStatus } from "@/lib/types"
 
 interface Category {
   id: string
@@ -71,7 +42,7 @@ interface Product {
 export default function StorePortalPage() {
   const router = useRouter()
   const { state } = useApp()
-  
+
   // Orders State
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -235,7 +206,7 @@ export default function StorePortalPage() {
       const data = await res.json()
       if (data.success) {
         setOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
-        
+
         let msg = ""
         if (status === "preparing") msg = "¡Pedido puesto en preparación!"
         if (status === "ready") msg = "¡Pedido listo para retirar! Se notificó al estudiante."
@@ -372,7 +343,7 @@ export default function StorePortalPage() {
   return (
     <div className="min-h-svh flex flex-col items-center" style={{ backgroundColor: "var(--brand-surface, #F9F5F0)" }}>
       <div className="w-full max-w-[1000px] min-h-svh flex flex-col bg-white shadow-lg relative border-x border-[#E5E7EB]">
-        
+
         {/* ── Desktop/Tablet Header ── */}
         <header className="bg-white border-b border-[#F3F4F6] sticky top-0 z-40 px-6 py-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
@@ -441,14 +412,12 @@ export default function StorePortalPage() {
                 }
               }}
               disabled={statusLoading}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                isOpen ? "bg-[#F97316]" : "bg-muted-foreground/30"
-              }`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isOpen ? "bg-[#F97316]" : "bg-muted-foreground/30"
+                }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  isOpen ? "translate-x-6" : "translate-x-1"
-                }`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isOpen ? "translate-x-6" : "translate-x-1"
+                  }`}
               />
             </button>
           </div>
@@ -503,11 +472,10 @@ export default function StorePortalPage() {
           <div className="flex bg-[#F3F4F6] p-1 rounded-2xl">
             <button
               onClick={() => setActiveTab("active")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === "active"
+              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "active"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
-              }`}
+                }`}
             >
               <ChefHat size={14} />
               Pedidos Activos
@@ -517,11 +485,10 @@ export default function StorePortalPage() {
             </button>
             <button
               onClick={() => setActiveTab("completed")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === "completed"
+              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "completed"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
-              }`}
+                }`}
             >
               <PackageCheck size={14} />
               Historial
@@ -531,11 +498,10 @@ export default function StorePortalPage() {
             </button>
             <button
               onClick={() => setActiveTab("products")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === "products"
+              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "products"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
-              }`}
+                }`}
             >
               <FolderOpen size={14} />
               Gestionar Menú
@@ -548,48 +514,44 @@ export default function StorePortalPage() {
 
         {/* ── Content Body ── */}
         <main className="flex-1 p-6 overflow-y-auto space-y-6">
-          
+
           {/* Active Orders Section */}
           {activeTab === "active" && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                 <button
                   onClick={() => setSelectedFilter("all")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                    selectedFilter === "all"
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${selectedFilter === "all"
                       ? "bg-[#1C1917] text-white border-[#1C1917]"
                       : "bg-[#F3F4F6] text-muted-foreground border-transparent hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   Todos ({activeOrders.length})
                 </button>
                 <button
                   onClick={() => setSelectedFilter("pending")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
-                    selectedFilter === "pending"
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${selectedFilter === "pending"
                       ? "bg-[#FFF7ED] text-[#F97316] border-[#FFEDD5] font-black"
                       : "bg-[#F3F4F6] text-muted-foreground border-transparent hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   Pendientes ({pendingCount})
                 </button>
                 <button
                   onClick={() => setSelectedFilter("preparing")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
-                    selectedFilter === "preparing"
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${selectedFilter === "preparing"
                       ? "bg-[#F0FDF4] text-[#16A34A] border-[#DCFCE7] font-black"
                       : "bg-[#F3F4F6] text-muted-foreground border-transparent hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   En preparación ({preparingCount})
                 </button>
                 <button
                   onClick={() => setSelectedFilter("ready")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
-                    selectedFilter === "ready"
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${selectedFilter === "ready"
                       ? "bg-[#EFF6FF] text-[#2563EB] border-[#DBEAFE] font-black"
                       : "bg-[#F3F4F6] text-muted-foreground border-transparent hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   Listos para retirar ({readyCount})
                 </button>
@@ -614,8 +576,8 @@ export default function StorePortalPage() {
                             order.status === "pending"
                               ? "#F97316"
                               : order.status === "preparing"
-                              ? "#16A34A"
-                              : "#2563EB"
+                                ? "#16A34A"
+                                : "#2563EB"
                         }}
                       />
 
@@ -636,20 +598,20 @@ export default function StorePortalPage() {
                                 order.status === "pending"
                                   ? "#FFF7ED"
                                   : order.status === "preparing"
-                                  ? "#F0FDF4"
-                                  : "#EFF6FF",
+                                    ? "#F0FDF4"
+                                    : "#EFF6FF",
                               color:
                                 order.status === "pending"
                                   ? "#F97316"
                                   : order.status === "preparing"
-                                  ? "#16A34A"
-                                  : "#2563EB",
+                                    ? "#16A34A"
+                                    : "#2563EB",
                               borderColor:
                                 order.status === "pending"
                                   ? "#FFEDD5"
                                   : order.status === "preparing"
-                                  ? "#DCFCE7"
-                                  : "#DBEAFE"
+                                    ? "#DCFCE7"
+                                    : "#DBEAFE"
                             }}
                           >
                             {order.status === "pending" && "Pendiente"}
@@ -666,7 +628,7 @@ export default function StorePortalPage() {
                                 {item.product.name}
                               </span>
                               <span className="text-muted-foreground font-medium">
-                                ${ (item.quantity * item.unitPrice).toLocaleString("es-AR") }
+                                ${(item.quantity * item.unitPrice).toLocaleString("es-AR")}
                               </span>
                             </div>
                           ))}
@@ -777,11 +739,10 @@ export default function StorePortalPage() {
                     >
                       <div className="flex items-start gap-3">
                         <div
-                          className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                            order.status === "completed"
+                          className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${order.status === "completed"
                               ? "bg-green-50 text-green-600"
                               : "bg-red-50 text-red-500"
-                          }`}
+                            }`}
                         >
                           {order.status === "completed" ? (
                             <CheckCircle2 size={20} />
@@ -817,11 +778,10 @@ export default function StorePortalPage() {
                           {order.paymentMethod === "efectivo" ? "Efectivo" : "Tarjeta"}
                         </span>
                         <span
-                          className={`text-xs font-bold px-3 py-1 rounded-full ${
-                            order.status === "completed"
+                          className={`text-xs font-bold px-3 py-1 rounded-full ${order.status === "completed"
                               ? "bg-green-50 text-green-700 border border-green-200"
                               : "bg-red-50 text-red-700 border border-red-200"
-                          }`}
+                            }`}
                         >
                           {order.status === "completed" ? "Entregado" : "Cancelado"}
                         </span>
@@ -941,7 +901,7 @@ export default function StorePortalPage() {
           )}
 
         </main>
-        
+
         {/* Footer info */}
         <footer className="py-6 border-t border-[#F3F4F6] text-center bg-[#F9F5F0]">
           <p className="text-xs text-muted-foreground">UADE EATS COMEDORES · Panel de Control Oficial · v1.0</p>
@@ -1024,7 +984,7 @@ export default function StorePortalPage() {
                       </button>
                     )}
                   </div>
-                  
+
                   {showNewCatInput ? (
                     <div className="flex gap-1.5">
                       <input
@@ -1040,7 +1000,7 @@ export default function StorePortalPage() {
                         onClick={async () => {
                           const val = newCatInputVal.trim()
                           if (!val) return
-                          
+
                           const existingCat = allCategories.find(c => c.name.toLowerCase() === val.toLowerCase())
                           if (existingCat) {
                             setProdCategory(existingCat.id)
@@ -1125,7 +1085,7 @@ export default function StorePortalPage() {
 
                             // Set loading state or toast
                             const loadingToast = toast.loading("Subiendo imagen...")
-                            
+
                             try {
                               const formData = new FormData()
                               formData.append("file", file)
@@ -1236,7 +1196,7 @@ export default function StorePortalPage() {
                   onClick={async () => {
                     const name = newCatName.trim()
                     if (!name) return
-                    
+
                     const existingCat = allCategories.find(c => c.name.toLowerCase() === name.toLowerCase())
                     if (existingCat) {
                       toast.error("La categoría ya existe")
@@ -1399,17 +1359,17 @@ export default function StorePortalPage() {
                               <Edit2 size={12} />
                             </button>
 
-                              {/* Delete / Reset */}
-                              <button
-                                onClick={() => {
-                                  setDeletingCat(cat)
-                                }}
-                                className="p-1.5 hover:bg-white rounded-lg text-red-500 hover:text-red-700 transition-colors"
-                                title="Eliminar categoría"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
+                            {/* Delete / Reset */}
+                            <button
+                              onClick={() => {
+                                setDeletingCat(cat)
+                              }}
+                              className="p-1.5 hover:bg-white rounded-lg text-red-500 hover:text-red-700 transition-colors"
+                              title="Eliminar categoría"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                         </>
                       )}
                     </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, Lock } from "lucide-react"
 import { useApp } from "@/context/AppContext"
@@ -15,8 +15,12 @@ export default function PersonalInfoPage() {
     ? user.name.split(" ").map((w) => w[0]).slice(0, 2).join("")
     : "?"
 
-  const roleLabel =
-    user?.role === "store_owner" ? "Vendedor" : user?.role === "faculty" ? "Docente" : user?.role === "staff" ? "Staff" : "Estudiante"
+  const roleLabel = useMemo(() => {
+    if (user?.role === "store_owner") return "Vendedor";
+    if (user?.role === "faculty") return "Docente";
+
+    return "Estudiante"
+  }, [user?.role])
 
   const [name, setName] = useState(user?.name ?? "")
 

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, ChevronRight, MapPin, CheckCircle2, Loader2, Store } from "lucide-react"
+import { Bell, ChevronRight, MapPin, CheckCircle2, Loader2, Store, Users } from "lucide-react"
 import { BottomNav } from "@/components/bottom-nav"
 import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
+import { SplitBillModal } from "@/components/split-bill-modal"
 
 const STEPS = ["Recibido", "En preparación", "Listo"]
 
@@ -35,6 +36,7 @@ export default function OrdersPage() {
   const [activeNav] = useState("orders")
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [splitOrder, setSplitOrder] = useState<{ total: number } | null>(null)
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -236,6 +238,16 @@ export default function OrdersPage() {
                             </span>
                           )}
                         </div>
+
+                        {/* Split bill */}
+                        <button
+                          onClick={() => setSplitOrder({ total: order.total })}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed text-xs font-semibold transition-all active:scale-[0.98] mt-1"
+                          style={{ borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }}
+                        >
+                          <Users size={13} />
+                          Dividir cuenta
+                        </button>
                       </div>
                     </div>
                   )
@@ -259,36 +271,49 @@ export default function OrdersPage() {
                     .map((i: any) => `${i.product.name} × ${i.quantity}`)
                     .join(", ")
                   return (
-                    <button
+                    <div
                       key={order.id}
-                      className="w-full text-left rounded-2xl bg-card border border-border/60 px-4 py-3 flex items-center gap-3 hover:bg-muted/40 transition-colors active:scale-[0.99]"
+                      className="rounded-2xl bg-card border border-border/60 px-4 py-3"
                     >
-                      {/* Store icon */}
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                        style={{ backgroundColor: "#FFF0E6" }}
-                      >
-                        <Store size={20} color="#F97316" />
+                      <div className="flex items-center gap-3">
+                        {/* Store icon */}
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                          style={{ backgroundColor: "#FFF0E6" }}
+                        >
+                          <Store size={20} color="#F97316" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-bold text-sm text-foreground truncate">{order.store.name}</p>
+                            <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
+                              {order.status === "completed" ? "Completado" : "Cancelado"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{itemsLabel}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</span>
+                            <span className="text-xs font-semibold text-foreground">
+                              ${order.total.toLocaleString("es-AR")}
+                            </span>
+                          </div>
+                        </div>
+
+                        <ChevronRight size={16} className="text-muted-foreground shrink-0" />
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-bold text-sm text-foreground truncate">{order.store.name}</p>
-                          <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
-                            {order.status === "completed" ? "Completado" : "Cancelado"}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{itemsLabel}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</span>
-                          <span className="text-xs font-semibold text-foreground">
-                            ${order.total.toLocaleString("es-AR")}
-                          </span>
-                        </div>
-                      </div>
-
-                      <ChevronRight size={16} className="text-muted-foreground shrink-0" />
-                    </button>
+                      {order.status === "completed" && (
+                        <button
+                          onClick={() => setSplitOrder({ total: order.total })}
+                          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed text-xs font-semibold transition-all active:scale-[0.98] mt-3"
+                          style={{ borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }}
+                        >
+                          <Users size={13} />
+                          Dividir cuenta
+                        </button>
+                      )}
+                    </div>
                   )
                 })}
               </div>
@@ -303,8 +328,15 @@ export default function OrdersPage() {
           onChange={(id) => {
             if (id === "home") router.push("/")
             if (id === "cart") router.push("/cart")
+            if (id === "wallet") router.push("/wallet")
             if (id === "profile") router.push("/profile")
           }}
+        />
+
+        <SplitBillModal
+          open={!!splitOrder}
+          total={splitOrder?.total ?? 0}
+          onClose={() => setSplitOrder(null)}
         />
       </div>
     </div>
