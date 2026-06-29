@@ -2,12 +2,12 @@
 
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, MapPin } from "lucide-react"
+import { MapPin } from "lucide-react"
 import { StoreCard } from "@/components/store-card"
 import { FilterChips } from "@/components/filter-chips"
 import { BottomNav } from "@/components/bottom-nav"
 import { SearchBar } from "@/components/search-bar"
-import { NotificationsPanel } from "@/components/notifications-panel"
+import { NotificationsBell } from "@/components/notifications-bell"
 import { FilterModal } from "@/components/filter-modal"
 import { Store, Product } from "@/lib/types"
 import { useApp } from "@/context/AppContext"
@@ -30,18 +30,15 @@ interface HomePageProps {
 
 export default function HomePageClient({ stores, allProducts }: HomePageProps) {
   const router = useRouter()
-  const { cartCount, state, dispatch } = useApp()
-  const { notifications } = state
+  const { cartCount, state } = useApp()
 
   const [activeFilter, setActiveFilter] = useState("all")
   const [activeNav, setActiveNav] = useState("home")
   const [search, setSearch] = useState("")
-  const [showNotifications, setShowNotifications] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [onlyOpen, setOnlyOpen] = useState(false)
   const [sortBy, setSortBy] = useState<"relevance" | "wait" | "rating">("relevance")
 
-  const unreadCount = notifications.filter((n) => !n.read).length
   const hasActiveFilters = onlyOpen || sortBy !== "relevance"
 
   const filteredStores = useMemo(() => {
@@ -107,25 +104,7 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
                 </span>
               </h1>
             </div>
-            <button
-              onClick={() => setShowNotifications(true)}
-              className="relative w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors"
-              aria-label="Notificaciones"
-            >
-              <Bell size={18} className="text-foreground" />
-              {unreadCount > 0 && (
-                <span
-                  className="absolute top-2 right-2 min-w-[8px] h-2 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: "#F97316" }}
-                >
-                  {unreadCount >= 2 && (
-                    <span className="text-white leading-none" style={{ fontSize: "9px", paddingInline: "2px" }}>
-                      {unreadCount}
-                    </span>
-                  )}
-                </span>
-              )}
-            </button>
+            <NotificationsBell />
           </div>
 
           {/* Greeting */}
@@ -272,15 +251,6 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
           cartCount={cartCount}
         />
       </div>
-
-      {/* ── Notifications Panel ── */}
-      <NotificationsPanel
-        open={showNotifications}
-        onClose={() => setShowNotifications(false)}
-        notifications={notifications}
-        onMarkRead={(id) => dispatch({ type: "MARK_NOTIFICATION_READ", payload: { id } })}
-        onMarkAllRead={() => dispatch({ type: "MARK_ALL_READ" })}
-      />
 
       {/* ── Filter Modal ── */}
       <FilterModal

@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, ChevronRight, MapPin, CheckCircle2, Loader2, Store, Users } from "lucide-react"
+import { ChevronRight, MapPin, CheckCircle2, Loader2, Store, Users } from "lucide-react"
 import { BottomNav } from "@/components/bottom-nav"
 import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
 import { SplitBillModal } from "@/components/split-bill-modal"
+import { NotificationsBell } from "@/components/notifications-bell"
 
 const STEPS = ["Recibido", "En preparación", "Listo"]
 
@@ -99,12 +100,7 @@ export default function OrdersPage() {
             <h1 className="text-2xl font-black tracking-tight text-foreground leading-none">
               Mis pedidos
             </h1>
-            <button
-              className="relative w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors"
-              aria-label="Notificaciones"
-            >
-              <Bell size={18} className="text-foreground" />
-            </button>
+            <NotificationsBell />
           </div>
         </header>
 
