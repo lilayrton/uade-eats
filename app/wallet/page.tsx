@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Wallet, Plus, Search, ArrowUpRight, ArrowDownLeft, ArrowUpRight as ArrowOut, Users } from "lucide-react"
+import { Wallet, Plus, Search, ArrowUpRight, ArrowDownLeft, ArrowUpRight as ArrowOut, Users, Loader2 } from "lucide-react"
 import { BottomNav } from "@/components/bottom-nav"
 import { WalletLoadModal } from "@/components/wallet-load-modal"
 import { useApp } from "@/context/AppContext"
@@ -15,9 +15,38 @@ interface WalletTransaction {
   id: string
   type: TransactionType
   label: string
-  amount: number  // positive = ingreso, negative = egreso
+  amount: number
   date: string
   subtitle?: string
+}
+
+interface ApiTransaction {
+  id: string
+  type: string
+  amount: number
+  status: string
+  description: string | null
+  createdAt: string
+}
+
+function mapApiTransaction(tx: ApiTransaction): WalletTransaction {
+  const date = new Date(tx.createdAt)
+  const now = new Date()
+  const isToday = date.toDateString() === now.toDateString()
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const isYesterday = date.toDateString() === yesterday.toDateString()
+
+  const timeStr = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
+  let dateStr: string
+  if (isToday) dateStr = `Hoy, ${timeStr}`
+  else if (isYesterday) dateStr = `Ayer, ${timeStr}`
+  else dateStr = date.toLocaleDateString("es-AR", { day: "numeric", month: "short" }) + `, ${timeStr}`
+
+  if (tx.type === "load") {
+    return { id: tx.id, type: "ingreso", label: tx.description || "Carga de saldo", amount: tx.amount, date: dateStr }
+  }
+  return { id: tx.id, type: "retiro", label: tx.description || "Pago", amount: -Math.abs(tx.amount), date: dateStr }
 }
 
 const TRANSACTION_META: Record<TransactionType, {
@@ -45,31 +74,6 @@ const TRANSACTION_META: Record<TransactionType, {
     amountColor: () => "#DC2626",
   },
 }
-
-const MOCK_TRANSACTIONS: WalletTransaction[] = [
-  {
-    id: "tx-1",
-    type: "ingreso",
-    label: "Carga de saldo",
-    amount: 1000,
-    date: "Hoy, 10:42",
-  },
-  {
-    id: "tx-2",
-    type: "pago_dividido",
-    label: "Pago dividido",
-    amount: -500,
-    date: "Ayer, 13:15",
-    subtitle: "La Cantina",
-  },
-  {
-    id: "tx-3",
-    type: "retiro",
-    label: "Retiro",
-    amount: -500,
-    date: "20 jun, 09:30",
-  },
-]
 
 // ── Transaction row component ─────────────────────────────────────────────────
 
@@ -122,7 +126,26 @@ export default function WalletPage() {
   const [notFound, setNotFound] = useState(false)
   const [paid, setPaid] = useState(false)
 
-  const balance = 0
+  const [balance, setBalance] = useState(0)
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([])
+  const [walletLoading, setWalletLoading] = useState(true)
+
+  useEffect(() => {
+    fetch("/api/wallet")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          setBalance(data.balance)
+          setTransactions(
+            (data.transactions as ApiTransaction[])
+              .filter((tx) => tx.status === "completed")
+              .map(mapApiTransaction)
+          )
+        }
+      })
+      .catch(console.error)
+      .finally(() => setWalletLoading(false))
+  }, [loadOpen])
 
   function handleSearch() {
     const key = codeInput.trim().toUpperCase()
@@ -168,7 +191,11 @@ export default function WalletPage() {
                 <span className="text-sm font-semibold opacity-80">Saldo disponible</span>
               </div>
               <p className="text-4xl font-black mb-1">
-                ${balance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                {walletLoading ? (
+                  <Loader2 className="animate-spin inline" size={32} />
+                ) : (
+                  `$${balance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`
+                )}
               </p>
               <p className="text-xs opacity-70">UADE Eats Wallet</p>
             </div>
@@ -287,9 +314,19 @@ export default function WalletPage() {
           <section>
             <h2 className="text-base font-bold text-foreground mb-3">Movimientos</h2>
             <div className="rounded-2xl bg-card border border-border/60 divide-y divide-border/40 overflow-hidden">
-              {MOCK_TRANSACTIONS.map((tx) => (
-                <TransactionRow key={tx.id} tx={tx} />
-              ))}
+              {walletLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="animate-spin text-muted-foreground" size={20} />
+                </div>
+              ) : transactions.length === 0 ? (
+                <p className="text-center text-xs text-muted-foreground py-8">
+                  Todavía no tenés movimientos.
+                </p>
+              ) : (
+                transactions.map((tx) => (
+                  <TransactionRow key={tx.id} tx={tx} />
+                ))
+              )}
             </div>
           </section>
 
