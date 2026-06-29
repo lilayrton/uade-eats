@@ -1,12 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import { toast } from "sonner"
-import { useApp } from "@/context/AppContext"
 import { cn } from "@/lib/utils"
-import type { Order } from "@/lib/types"
+import type { UserOrder } from "@/lib/types"
 
 const PROBLEM_TYPES = [
   "Pedido incorrecto",
@@ -24,20 +23,29 @@ const URGENCY_OPTIONS: { id: Urgency; label: string; color: string; border: stri
   { id: "high", label: "Alta", color: "text-red-500", border: "border-red-400", bg: "bg-red-50" },
 ]
 
-function formatDate(ts: number) {
+function formatDate(ts: string) {
   return new Date(ts).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })
 }
 
 export default function ReportPage() {
   const router = useRouter()
-  const { state } = useApp()
 
+  const [orders, setOrders] = useState<UserOrder[]>([])
   const [problemType, setProblemType] = useState<string | null>(null)
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<UserOrder | null>(null)
   const [showOrderList, setShowOrderList] = useState(false)
   const [description, setDescription] = useState("")
   const [urgency, setUrgency] = useState<Urgency | null>(null)
   const [errors, setErrors] = useState<{ type?: string; description?: string }>({})
+
+  useEffect(() => {
+    fetch("/api/orders")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setOrders(data.orders.slice(0, 5))
+      })
+      .catch(() => {})
+  }, [])
 
   const handleSubmit = () => {
     const newErrors: typeof errors = {}
@@ -106,17 +114,17 @@ export default function ReportPage() {
             >
               <span className={selectedOrder ? "text-foreground" : ""}>
                 {selectedOrder
-                  ? `${selectedOrder.storeName} · #${selectedOrder.pickupCode} · ${formatDate(selectedOrder.createdAt)}`
+                  ? `${selectedOrder.store.name} · #${selectedOrder.pickupCode} · ${formatDate(selectedOrder.createdAt)}`
                   : "Seleccionar pedido (opcional)"}
               </span>
               <ChevronLeft size={16} className={cn("text-muted-foreground transition-transform", showOrderList ? "-rotate-90" : "rotate-180")} />
             </button>
             {showOrderList && (
               <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-border bg-card shadow-lg z-10 overflow-hidden">
-                {state.orders.length === 0 ? (
+                {orders.length === 0 ? (
                   <p className="px-4 py-3 text-sm text-muted-foreground">No tenés pedidos recientes</p>
                 ) : (
-                  state.orders.slice(0, 5).map((order) => (
+                  orders.map((order) => (
                     <button
                       key={order.id}
                       onClick={() => {
@@ -125,7 +133,7 @@ export default function ReportPage() {
                       }}
                       className="w-full px-4 py-3 text-left text-sm hover:bg-muted/40 transition-colors border-b border-border/40 last:border-0"
                     >
-                      <span className="font-medium text-foreground">{order.storeName}</span>
+                      <span className="font-medium text-foreground">{order.store.name}</span>
                       <span className="text-muted-foreground ml-2">· #{order.pickupCode} · {formatDate(order.createdAt)}</span>
                     </button>
                   ))

@@ -40,6 +40,25 @@ interface OrderItem {
   }
 }
 
+export interface UserOrder {
+  id: string
+  userId: string
+  storeId: string
+  total: number
+  status: OrderStatus
+  paymentMethod: string
+  pickupCode: number
+  notes?: string | null
+  createdAt: string
+  updatedAt: string
+  store: { id: string; name: string }
+  user: {
+    name: string
+    email: string
+  }
+  items: OrderItem[]
+}
+
 export interface Order {
   id: string
   userId: string
