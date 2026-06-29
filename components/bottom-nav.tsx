@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, ClipboardList, ShoppingCart, User, Wallet } from "lucide-react"
+import { Home, ClipboardList, ShoppingCart, User as UserIcon, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const NAV_ITEMS = [
@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { id: "orders", label: "Pedidos", icon: ClipboardList },
   { id: "cart", label: "Carrito", icon: ShoppingCart },
   { id: "wallet", label: "Wallet", icon: Wallet },
-  { id: "profile", label: "Perfil", icon: User },
+  { id: "profile", label: "Perfil", icon: UserIcon },
 ]
 
 interface BottomNavProps {

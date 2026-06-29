@@ -2,13 +2,11 @@
 
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Store, ChevronRight, Info } from "lucide-react"
+import { ArrowLeft, Store } from "lucide-react"
 import { CartItem } from "@/components/cart-item"
 import { CartEmpty } from "@/components/cart-empty"
 import { BottomNav } from "@/components/bottom-nav"
 import type { Product } from "@/lib/types"
-// TODO: replace with API call
-import { MOCK_STORES } from "@/lib/mock-data"
 import { useApp } from "@/context/AppContext"
 
 export default function CartPage() {

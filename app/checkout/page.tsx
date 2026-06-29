@@ -13,7 +13,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { BottomNav } from "@/components/bottom-nav"
 import { useApp } from "@/context/AppContext"
 import { SplitBillModal } from "@/components/split-bill-modal"
 
