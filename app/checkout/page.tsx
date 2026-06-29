@@ -9,11 +9,13 @@ import {
   CreditCard,
   Lock,
   Loader2,
+  Users,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { BottomNav } from "@/components/bottom-nav"
 import { useApp } from "@/context/AppContext"
+import { SplitBillModal } from "@/components/split-bill-modal"
 
 type PaymentId = "mercadopago" | "efectivo" | "tarjeta"
 
@@ -105,6 +107,7 @@ export default function CheckoutPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [couponInput, setCouponInput] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null)
+  const [splitOpen, setSplitOpen] = useState(false)
 
   const cart = state.cart
   const storeName = cart.storeName ?? "UADE Eats"
@@ -254,6 +257,7 @@ export default function CheckoutPage() {
               setCouponInput={setCouponInput}
               appliedCoupon={appliedCoupon}
               setAppliedCoupon={setAppliedCoupon}
+              onSplitBill={() => setSplitOpen(true)}
             />
           ) : (
             <Step2Content
@@ -300,6 +304,11 @@ export default function CheckoutPage() {
           )}
         </div>
 
+        <SplitBillModal
+          open={splitOpen}
+          total={total}
+          onClose={() => setSplitOpen(false)}
+        />
       </div>
     </div>
   )
@@ -316,7 +325,8 @@ function Step1Content({
   couponInput,
   setCouponInput,
   appliedCoupon,
-  setAppliedCoupon
+  setAppliedCoupon,
+  onSplitBill,
 }: {
   storeName: string
   items: Array<{ id: string; name: string; quantity: number; unitPrice: number }>
@@ -327,6 +337,7 @@ function Step1Content({
   setCouponInput: (val: string) => void
   appliedCoupon: string | null
   setAppliedCoupon: (val: string | null) => void
+  onSplitBill: () => void
 }) {
   return (
     <div className="pt-2 space-y-3">
@@ -432,6 +443,18 @@ function Step1Content({
             ${total.toLocaleString("es-AR")}
           </span>
         </div>
+      </div>
+
+      {/* Split bill button */}
+      <div className="mx-4">
+        <button
+          onClick={onSplitBill}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-dashed font-semibold text-sm transition-all active:scale-[0.98]"
+          style={{ borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }}
+        >
+          <Users size={16} />
+          Dividir cuenta
+        </button>
       </div>
     </div>
   )

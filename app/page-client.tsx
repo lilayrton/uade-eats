@@ -266,6 +266,7 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
             setActiveNav(id)
             if (id === "cart") router.push("/cart")
             if (id === "orders") router.push("/orders")
+            if (id === "wallet") router.push("/wallet")
             if (id === "profile") router.push("/profile")
           }}
           cartCount={cartCount}

@@ -201,6 +201,7 @@ export default function CartPage() {
             setActiveNav(id)
             if (id === "home") router.push("/")
             if (id === "orders") router.push("/orders")
+            if (id === "wallet") router.push("/wallet")
             if (id === "profile") router.push("/profile")
           }}
           cartCount={cartCount}
