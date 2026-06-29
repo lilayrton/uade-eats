@@ -8,16 +8,30 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         String   @default("student")
-  legajo       String?
-  storeId      String?
-  store        Store?   @relation(fields: [storeId], references: [id])
-  createdAt    DateTime @default(now())
-  orders       Order[]
+  id                 String              @id @default(cuid())
+  name               String
+  email              String              @unique
+  passwordHash       String
+  role               String              @default("student")
+  legajo             String?
+  storeId            String?
+  store              Store?              @relation(fields: [storeId], references: [id])
+  createdAt          DateTime            @default(now())
+  orders             Order[]
+  walletBalance      Float               @default(0)
+  walletTransactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  type           String   // "load" | "payment"
+  amount         Float
+  status         String   @default("pending") // "pending" | "completed" | "failed"
+  mpPreferenceId String?
+  description    String?
+  createdAt      DateTime @default(now())
 }
 
 model Store {
