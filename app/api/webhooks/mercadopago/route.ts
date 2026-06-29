@@ -33,19 +33,41 @@ export async function POST(req: Request) {
       console.log(`Payment parsed - OrderID: ${orderId}, Status: ${paymentStatus}`)
 
       if (paymentStatus === "approved" && orderId) {
-        const order = await db.order.findUnique({
-          where: { id: orderId }
-        })
-
-        if (order && (order.status === "pending_payment" || order.status === "cancelled" || order.status === "abandoned")) {
-          const updatedOrder = await db.order.update({
-            where: { id: orderId },
-            data: { status: "pending" }
+        if (orderId.startsWith("wallet_")) {
+          // Wallet top-up payment
+          const transactionId = orderId.replace("wallet_", "")
+          const tx = await db.walletTransaction.findUnique({ where: { id: transactionId } })
+          if (tx) {
+            // Transición atómica pending -> completed: solo el primer caller
+            // (webhook o confirm) obtiene count === 1 y acredita el saldo. Esto
+            // evita doble acreditación si ambos corren concurrentemente.
+            const result = await db.walletTransaction.updateMany({
+              where: { id: transactionId, status: "pending" },
+              data: { status: "completed" }
+            })
+            if (result.count === 1) {
+              await db.user.update({
+                where: { id: tx.userId },
+                data: { walletBalance: { increment: tx.amount } }
+              })
+              console.log(`Wallet transaction ${transactionId} completed, credited $${tx.amount} to user ${tx.userId}`)
+            }
+          }
+        } else {
+          // Regular order payment
+          const order = await db.order.findUnique({
+            where: { id: orderId }
           })
 
-          // Dispatch event to SSE connections in La Cantina
-          dispatchEvent("new_order", { orderId: updatedOrder.id, storeId: updatedOrder.storeId })
-          console.log(`Order ${orderId} successfully marked as PAID and dispatched via SSE!`)
+          if (order && (order.status === "pending_payment" || order.status === "cancelled" || order.status === "abandoned")) {
+            const updatedOrder = await db.order.update({
+              where: { id: orderId },
+              data: { status: "pending" }
+            })
+
+            dispatchEvent("new_order", { orderId: updatedOrder.id, storeId: updatedOrder.storeId })
+            console.log(`Order ${orderId} successfully marked as PAID and dispatched via SSE!`)
+          }
         }
       }
     }
