@@ -11,6 +11,7 @@ import {
   TrendingUp,
   RefreshCw,
   XCircle,
+  AlertCircle,
   Play,
   Check,
   PackageCheck,
@@ -19,7 +20,8 @@ import {
   Image as ImageIcon,
   FolderOpen,
   Wallet,
-  Banknote
+  Banknote,
+  Plus
 } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/context/AppContext"
@@ -423,23 +425,23 @@ export default function StorePortalPage() {
       <div className="w-full max-w-[1000px] min-h-svh flex flex-col bg-white shadow-lg relative border-x border-[#E5E7EB]">
 
         {/* ── Desktop/Tablet Header ── */}
-        <header className="bg-white border-b border-[#F3F4F6] sticky top-0 z-40 px-6 py-4 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
+        <header className="bg-white border-b border-[#F3F4F6] sticky top-0 z-40 px-3 md:px-6 py-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => router.push("/profile")}
                 aria-label="Salir al perfil"
-                className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#F9F5F0] hover:bg-[#F3E8FF] text-[#1C1917] transition-colors active:scale-95"
+                className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#F9F5F0] hover:bg-[#F3F4F6] text-[#1C1917] transition-colors active:scale-95"
               >
                 <ArrowLeft size={18} />
               </button>
               <div>
                 <h1 className="text-xl font-black text-[#1C1917]">Portal de Administración</h1>
-                <p className="text-xs text-muted-foreground font-semibold mt-0.5">UADE EATS COMEDORES</p>
+                <p className="text-xs text-muted-foreground font-semibold mt-0.5">{state.user?.name || ""}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2 shrink-0">
               <span className="text-xs font-semibold px-2 py-1 bg-green-50 text-green-700 rounded-full border border-green-200 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
                 Monitoreo en tiempo real
@@ -501,7 +503,7 @@ export default function StorePortalPage() {
           </div>
           {/* ── KPIs Bar (Hidden on Products and Wallet View) ── */}
           {activeTab !== "products" && activeTab !== "wallet" && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
               <div className="bg-[#FFF7ED] border border-[#FFEDD5] p-3 rounded-2xl flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#F97316]/10 text-[#F97316] shrink-0">
                   <Clock size={20} />
@@ -547,23 +549,23 @@ export default function StorePortalPage() {
           )}
 
           {/* ── Main Tab Switcher ── */}
-          <div className="flex bg-[#F3F4F6] p-1 rounded-2xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1 md:gap-0 bg-[#F3F4F6] p-1 rounded-2xl">
             <button
               onClick={() => setActiveTab("active")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "active"
+              className={`py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "active"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
                 }`}
             >
               <ChefHat size={14} />
-              Pedidos Activos
+              <span className="hidden sm:inline">Pedidos </span>Activos
               <span className="bg-[#F97316] text-white text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">
                 {activeOrders.length}
               </span>
             </button>
             <button
               onClick={() => setActiveTab("completed")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "completed"
+              className={`py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "completed"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
                 }`}
@@ -576,20 +578,20 @@ export default function StorePortalPage() {
             </button>
             <button
               onClick={() => setActiveTab("products")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "products"
+              className={`py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "products"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
                 }`}
             >
               <FolderOpen size={14} />
-              Gestionar Menú
+              <span className="hidden sm:inline">Gestionar </span>Menú
               <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">
                 {products.length}
               </span>
             </button>
             <button
               onClick={() => setActiveTab("wallet")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "wallet"
+              className={`py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "wallet"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
                 }`}
@@ -601,7 +603,7 @@ export default function StorePortalPage() {
         </header>
 
         {/* ── Content Body ── */}
-        <main className="flex-1 p-6 overflow-y-auto space-y-6">
+        <main className="flex-1 p-3 md:p-6 overflow-y-auto space-y-6">
 
           {/* Active Orders Section */}
           {activeTab === "active" && (
@@ -648,7 +650,7 @@ export default function StorePortalPage() {
               {filteredActiveOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 bg-[#F9F5F0] rounded-3xl border border-dashed border-[#E5E7EB]">
                   <ShoppingBag size={48} className="text-muted-foreground/40 animate-pulse" />
-                  <p className="mt-4 font-bold text-muted-foreground text-sm">No hay pedidos activos en este estado</p>
+                  <p className="mt-4 font-bold text-muted-foreground text-sm">No hay pedidos activos</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -901,7 +903,7 @@ export default function StorePortalPage() {
                     disabled={!isEditingBankInfo}
                     value={bankInfo}
                     onChange={(e) => setBankInfo(e.target.value)}
-                    placeholder="Ej: milanesa.papas.mp o 0000000000000000"
+                    placeholder="Ej: milanesa.papas.mp"
                     className="flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-bold text-foreground disabled:opacity-70 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                   />
                   {isEditingBankInfo ? (
@@ -928,7 +930,7 @@ export default function StorePortalPage() {
                         }
                       }}
                       disabled={bankInfoLoading}
-                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-colors disabled:opacity-50"
+                      className="px-6 py-3 bg-[#F97316] hover:bg-[#EA580C] text-white font-bold rounded-2xl transition-colors disabled:opacity-50"
                     >
                       {bankInfoLoading ? <RefreshCw className="animate-spin" size={20} /> : "Guardar"}
                     </button>
@@ -946,14 +948,14 @@ export default function StorePortalPage() {
               {/* Debt and Balance Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Wallet Balance Hero Card */}
-                <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-8 rounded-3xl shadow-xl flex flex-col justify-between gap-6 text-white relative overflow-hidden">
+                <div className="bg-gradient-to-br from-[#F97316] to-[#EA580C] p-8 rounded-3xl shadow-xl flex flex-col justify-between gap-6 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                     <Wallet size={120} />
                   </div>
                   <div className="z-10">
-                    <p className="text-blue-200 font-bold tracking-wider uppercase text-sm mb-2">Saldo Disponible</p>
+                    <p className="text-orange-100 font-bold tracking-wider uppercase text-sm mb-2">Saldo Disponible</p>
                     <h2 className="text-4xl md:text-5xl font-black mb-2">${storeWalletBalance.toLocaleString("es-AR")}</h2>
-                    <p className="text-blue-100 font-medium text-sm">
+                    <p className="text-white/80 font-medium text-sm">
                       Dinero a favor por pedidos con Wallet.
                     </p>
                   </div>
@@ -967,7 +969,7 @@ export default function StorePortalPage() {
                         setShowWithdrawModal(true)
                       }}
                       disabled={withdrawLoading || storeWalletBalance <= 0}
-                      className="w-full px-8 py-4 bg-white hover:bg-gray-50 text-blue-700 font-black rounded-2xl transition-transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                      className="w-full px-8 py-4 bg-white hover:bg-orange-50 text-[#EA580C] font-black rounded-2xl transition-transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
                     >
                       {withdrawLoading ? <RefreshCw className="animate-spin" size={20} /> : <Banknote size={20} />}
                       Retirar Dinero
@@ -976,22 +978,22 @@ export default function StorePortalPage() {
                 </div>
 
                 {/* Platform Debt Card */}
-                <div className="bg-gradient-to-br from-red-600 to-red-800 p-8 rounded-3xl shadow-xl flex flex-col justify-between gap-6 text-white relative overflow-hidden">
+                <div className={`p-8 rounded-3xl shadow-xl flex flex-col justify-between gap-6 text-white relative overflow-hidden ${platformDebt > 0 ? "bg-gradient-to-br from-rose-600 to-red-700" : "bg-gradient-to-br from-slate-600 to-slate-800"}`}>
                   <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                    <XCircle size={120} />
+                    {platformDebt > 0 ? <AlertCircle size={120} /> : <CheckCircle2 size={120} />}
                   </div>
                   <div className="z-10">
-                    <p className="text-red-200 font-bold tracking-wider uppercase text-sm mb-2">Deuda con la plataforma</p>
+                    <p className={`font-bold tracking-wider uppercase text-sm mb-2 ${platformDebt > 0 ? "text-rose-200" : "text-slate-300"}`}>Deuda con la plataforma</p>
                     <h2 className="text-4xl md:text-5xl font-black mb-2">${platformDebt.toLocaleString("es-AR")}</h2>
-                    <p className="text-red-100 font-medium text-sm">
-                      Comisiones por cobros en efectivo (5%).
+                    <p className={`font-medium text-sm ${platformDebt > 0 ? "text-rose-100" : "text-slate-400"}`}>
+                      {platformDebt > 0 ? "Comisiones por cobros en efectivo (5%)." : "Sin deuda pendiente. ¡Estás al día con la plataforma!"}
                     </p>
                   </div>
                   <div className="z-10 mt-4">
                     <button
                       onClick={handlePayDebt}
                       disabled={payDebtLoading || platformDebt <= 0 || storeWalletBalance < platformDebt}
-                      className="w-full px-8 py-4 bg-white hover:bg-gray-50 text-red-700 font-black rounded-2xl transition-transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                      className={`w-full px-8 py-4 bg-white hover:bg-gray-50 font-black rounded-2xl transition-transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg ${platformDebt > 0 ? "text-red-700 hover:bg-rose-50" : "text-slate-700"}`}
                     >
                       {payDebtLoading ? <RefreshCw className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
                       Pagar Deuda con Saldo Wallet
@@ -1002,7 +1004,7 @@ export default function StorePortalPage() {
 
               {/* Wallet Historical Orders */}
               <div>
-                <h3 className="font-black text-xl text-[#1C1917] mb-4 flex items-center gap-2">
+                <h3 className="text-base font-black text-[#1C1917] mb-4 flex items-center gap-2">
                   <Banknote className="text-blue-500" />
                   Movimientos de la Billetera
                 </h3>
@@ -1162,7 +1164,7 @@ export default function StorePortalPage() {
 
         {/* Footer info */}
         <footer className="py-6 border-t border-[#F3F4F6] text-center bg-[#F9F5F0]">
-          <p className="text-xs text-muted-foreground">UADE EATS COMEDORES · Panel de Control Oficial · v1.0</p>
+          <p className="text-xs text-muted-foreground">UADE EATS · Panel de Control · v1.0</p>
         </footer>
 
       </div>
@@ -1644,7 +1646,7 @@ export default function StorePortalPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl overflow-hidden relative animate-in fade-in zoom-in duration-200">
             <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4">
+              <div className="w-16 h-16 bg-[#FFF7ED] rounded-full flex items-center justify-center text-[#F97316] mb-4">
                 <Banknote size={32} />
               </div>
               <h2 className="text-2xl font-black text-[#1C1917] mb-2">Confirmar Retiro</h2>
@@ -1671,7 +1673,7 @@ export default function StorePortalPage() {
                         toast.success("¡Retiro exitoso! La plata llegará pronto a tu cuenta.")
                         setStoreWalletBalance(0)
                         setShowWithdrawModal(false)
-                        fetchTransactions()
+                        fetchWalletTransactions()
                       } else {
                         toast.error(data.error || "Error al procesar el retiro")
                       }
@@ -1682,7 +1684,7 @@ export default function StorePortalPage() {
                     }
                   }}
                   disabled={withdrawLoading}
-                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+                  className="flex-1 py-3 bg-[#F97316] hover:bg-[#EA580C] text-white font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
                 >
                   {withdrawLoading ? <RefreshCw className="animate-spin" size={20} /> : <Check size={20} strokeWidth={3} />}
                   Sí, Retirar

@@ -5,31 +5,28 @@ import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   Store,
-  Banknote,
   CreditCard,
   Lock,
   Loader2,
-  Users,
   Wallet,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
-import { SplitBillModal } from "@/components/split-bill-modal"
 
-type PaymentId = "mercadopago" | "efectivo" | "tarjeta" | "wallet"
+type PaymentId = "mercadopago" | "tarjeta" | "wallet"
 
 interface PaymentMethod {
   id: PaymentId
   label: string
   sublabel: string
   disabled?: boolean
+  comingSoon?: boolean
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = [
   { id: "mercadopago", label: "MercadoPago",         sublabel: "Pago digital" },
-  { id: "efectivo",    label: "Efectivo al retirar",  sublabel: "Pagás cuando retirás" },
-  { id: "tarjeta",     label: "Tarjeta de crédito",   sublabel: "",              disabled: true },
+  { id: "tarjeta",     label: "Tarjeta de crédito",   sublabel: "",              disabled: true, comingSoon: true },
 ]
 
 // ── Step Indicator ────────────────────────────────────────────────────────────
@@ -102,12 +99,11 @@ export default function CheckoutPage() {
   const router = useRouter()
   const { state, dispatch } = useApp()
   const [step, setStep] = useState<1 | 2>(1)
-  const [selectedPayment, setSelectedPayment] = useState<PaymentId>("efectivo")
+  const [selectedPayment, setSelectedPayment] = useState<PaymentId>("mercadopago")
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [couponInput, setCouponInput] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null)
-  const [splitOpen, setSplitOpen] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
 
   const cart = state.cart
@@ -163,8 +159,11 @@ export default function CheckoutPage() {
   }, [step, router])
 
   const handleContinue = useCallback(() => {
+    if (balance !== null && balance >= discountedSubtotal * 1.03) {
+      setSelectedPayment("wallet")
+    }
     setStep(2)
-  }, [])
+  }, [balance, discountedSubtotal])
 
   const handlePay = useCallback(async () => {
     if (isProcessing) return
@@ -281,7 +280,6 @@ export default function CheckoutPage() {
               setCouponInput={setCouponInput}
               appliedCoupon={appliedCoupon}
               setAppliedCoupon={setAppliedCoupon}
-              onSplitBill={() => setSplitOpen(true)}
             />
           ) : (
             <Step2Content
@@ -289,6 +287,7 @@ export default function CheckoutPage() {
               onSelect={setSelectedPayment}
               total={total}
               balance={balance}
+              discountedSubtotal={discountedSubtotal}
             />
           )}
         </main>
@@ -330,11 +329,6 @@ export default function CheckoutPage() {
           )}
         </div>
 
-        <SplitBillModal
-          open={splitOpen}
-          total={total}
-          onClose={() => setSplitOpen(false)}
-        />
       </div>
     </div>
   )
@@ -354,7 +348,6 @@ function Step1Content({
   setCouponInput,
   appliedCoupon,
   setAppliedCoupon,
-  onSplitBill,
 }: {
   storeName: string
   items: Array<{ id: string; name: string; quantity: number; unitPrice: number }>
@@ -367,7 +360,6 @@ function Step1Content({
   setCouponInput: (val: string) => void
   appliedCoupon: string | null
   setAppliedCoupon: (val: string | null) => void
-  onSplitBill: () => void
 }) {
   return (
     <div className="pt-2 space-y-3">
@@ -472,17 +464,6 @@ function Step1Content({
         </div>
       </div>
 
-      {/* Split bill button */}
-      <div className="mx-4">
-        <button
-          onClick={onSplitBill}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-dashed font-semibold text-sm transition-all active:scale-[0.98]"
-          style={{ borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }}
-        >
-          <Users size={16} />
-          Dividir cuenta
-        </button>
-      </div>
     </div>
   )
 }
@@ -494,18 +475,42 @@ function Step2Content({
   onSelect,
   total,
   balance,
+  discountedSubtotal,
 }: {
   selectedPayment: PaymentId
   onSelect: (id: PaymentId) => void
   total: number
   balance: number | null
+  discountedSubtotal: number
 }) {
+  const walletState =
+    balance === null      ? "loading"
+    : balance < total     ? "insufficient"
+    : "available"
+
+  const shortage = walletState === "insufficient" ? Math.ceil(total - balance!) : 0
+  // Savings vs MercadoPago (2% diff): only meaningful when wallet is available
+  const savings  = walletState === "available"    ? Math.round(discountedSubtotal * 0.02) : 0
+
+  const walletSublabel =
+    walletState === "loading"      ? "Cargando saldo..."
+    : walletState === "insufficient" ? `Saldo: $${balance!.toLocaleString("es-AR")} · Te faltan $${shortage.toLocaleString("es-AR")}`
+    : `Saldo disponible: $${balance!.toLocaleString("es-AR")}`
+
+  const walletDisabled = walletState !== "available"
+
+  const walletOpacity =
+    walletState === "loading"      ? "opacity-40"
+    : walletState === "insufficient" ? "opacity-60"
+    : ""
+
   const methods = [
     {
       id: "wallet" as PaymentId,
       label: "Mi Wallet",
-      sublabel: balance !== null ? `Saldo disponible: $${balance.toLocaleString("es-AR")}` : "Cargando saldo...",
-      disabled: balance === null || balance < total,
+      sublabel: walletSublabel,
+      disabled: walletDisabled,
+      comingSoon: false,
     },
     ...PAYMENT_METHODS
   ]
@@ -519,6 +524,12 @@ function Step2Content({
       <div className="mx-4 space-y-3">
         {methods.map((method) => {
           const isSelected = selectedPayment === method.id
+          const isWallet = method.id === "wallet"
+
+          const disabledClass = method.disabled
+            ? `${isWallet ? walletOpacity : "opacity-50"} cursor-not-allowed`
+            : "active:scale-[0.98]"
+
           return (
             <button
               key={method.id}
@@ -527,9 +538,7 @@ function Step2Content({
               aria-pressed={isSelected}
               className={cn(
                 "w-full flex items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left transition-all duration-150",
-                method.disabled
-                  ? "opacity-50 cursor-not-allowed"
-                  : "active:scale-[0.98]",
+                disabledClass,
                 isSelected && !method.disabled
                   ? "border-[#F97316] bg-[#FFF0E6]"
                   : "border-[#F3F4F6] bg-white"
@@ -544,15 +553,37 @@ function Step2Content({
                   <span className="text-sm font-semibold text-[#1C1917]">
                     {method.label}
                   </span>
-                  {method.id === "wallet" && (
+
+                  {/* Wallet: badge según estado */}
+                  {isWallet && walletState === "available" && (
+                    <>
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
+                      >
+                        Menor comisión (3%)
+                      </span>
+                      {savings > 0 && (
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
+                        >
+                          Ahorrás ${savings.toLocaleString("es-AR")}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {isWallet && walletState === "insufficient" && (
                     <span
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
+                      style={{ backgroundColor: "#FEF3C7", color: "#D97706" }}
                     >
-                      Menor comisión (3%)
+                      Saldo insuficiente
                     </span>
                   )}
-                  {method.disabled && (
+
+                  {/* Tarjeta y otros: solo si comingSoon */}
+                  {method.comingSoon && (
                     <span
                       className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                       style={{ backgroundColor: "#F3F4F6", color: "#9CA3AF" }}
@@ -616,17 +647,6 @@ function PaymentMethodIcon({ id }: { id: PaymentId }) {
         }}
       >
         MP
-      </div>
-    )
-  }
-
-  if (id === "efectivo") {
-    return (
-      <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: "#F0FDF4" }}
-      >
-        <Banknote size={22} color="#16A34A" />
       </div>
     )
   }

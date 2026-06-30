@@ -20,6 +20,8 @@ model User {
   orders             Order[]
   walletBalance      Float               @default(0)
   walletTransactions WalletTransaction[]
+  splitBillsCreated  SplitBill[]         @relation("SplitBillCreator")
+  splitPaymentsMade  SplitPayment[]      @relation("SplitPaymentPayer")
 }
 
 model WalletTransaction {
@@ -109,6 +111,7 @@ model Order {
   updatedAt     DateTime    @updatedAt
   items         OrderItem[]
   platformTransactions PlatformTransaction[]
+  splitBill     SplitBill?
 }
 
 model OrderItem {
@@ -119,6 +122,31 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
   quantity  Int
   unitPrice Float
+}
+
+model SplitBill {
+  id              String         @id @default(cuid())
+  code            String         @unique
+  orderId         String         @unique
+  order           Order          @relation(fields: [orderId], references: [id])
+  creatorId       String
+  creator         User           @relation("SplitBillCreator", fields: [creatorId], references: [id])
+  peopleCount     Int
+  amountPerPerson Float
+  createdAt       DateTime       @default(now())
+  payments        SplitPayment[]
+}
+
+model SplitPayment {
+  id          String    @id @default(cuid())
+  splitBillId String
+  splitBill   SplitBill @relation(fields: [splitBillId], references: [id], onDelete: Cascade)
+  payerId     String
+  payer       User      @relation("SplitPaymentPayer", fields: [payerId], references: [id])
+  amount      Float
+  createdAt   DateTime  @default(now())
+
+  @@unique([splitBillId, payerId]) // un usuario paga su parte una sola vez
 }
 
 model PlatformTransaction {

@@ -1,29 +1,68 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X, Users, Copy, Check } from "lucide-react"
 
 interface SplitBillModalProps {
   open: boolean
   total: number
+  orderId: string
   onClose: () => void
+  existingSplit?: {
+    code: string
+    peopleCount: number
+    amountPerPerson: number
+    paidCount: number
+  }
 }
 
-function generateCode(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
-}
-
-export function SplitBillModal({ open, total, onClose }: SplitBillModalProps) {
+export function SplitBillModal({ open, total, orderId, onClose, existingSplit }: SplitBillModalProps) {
   const [people, setPeople] = useState(2)
   const [code, setCode] = useState<string | null>(null)
+  const [perPerson, setPerPerson] = useState<number>(0)
+  const [paidCount, setPaidCount] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open && existingSplit) {
+      setCode(existingSplit.code)
+      setPerPerson(existingSplit.amountPerPerson)
+      setPeople(existingSplit.peopleCount)
+      setPaidCount(existingSplit.paidCount)
+    }
+  }, [open, existingSplit])
 
   if (!open) return null
 
-  const perPerson = (total / people).toFixed(2)
+  const previewPerPerson = (total / people).toFixed(2)
+  const pendingCount = people - 1 - paidCount
+  const allPaid = paidCount >= people - 1
 
-  function handleGenerate() {
-    setCode(generateCode())
+  async function handleGenerate() {
+    if (!orderId) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/split-bills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, peopleCount: people }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        setError(data.error || "No se pudo generar el código")
+        return
+      }
+      setCode(data.code)
+      setPerPerson(data.amountPerPerson)
+      setPaidCount(0)
+    } catch {
+      setError("No se pudo generar el código")
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleCopy() {
@@ -35,8 +74,11 @@ export function SplitBillModal({ open, total, onClose }: SplitBillModalProps) {
 
   function handleClose() {
     setCode(null)
+    setPerPerson(0)
     setPeople(2)
+    setPaidCount(0)
     setCopied(false)
+    setError(null)
     onClose()
   }
 
@@ -79,7 +121,8 @@ export function SplitBillModal({ open, total, onClose }: SplitBillModalProps) {
             </div>
 
             {/* People selector */}
-            <p className="text-sm font-semibold text-[#1C1917] mb-3">¿Entre cuántas personas?</p>
+            <p className="text-sm font-semibold text-[#1C1917] mb-0.5">¿Entre cuántas personas?</p>
+            <p className="text-xs text-[#9CA3AF] mb-3">Vos estás incluido en el conteo</p>
             <div className="flex items-center justify-center gap-6 mb-6">
               <button
                 onClick={() => setPeople((p) => Math.max(2, p - 1))}
@@ -102,21 +145,26 @@ export function SplitBillModal({ open, total, onClose }: SplitBillModalProps) {
             {/* Per person preview */}
             <div className="flex items-center justify-between px-4 py-3 bg-[#F0FDF4] rounded-2xl mb-6">
               <span className="text-sm text-[#16A34A]">Tu parte</span>
-              <span className="text-lg font-bold text-[#16A34A]">${Number(perPerson).toLocaleString("es-AR")}</span>
+              <span className="text-lg font-bold text-[#16A34A]">${Number(previewPerPerson).toLocaleString("es-AR")}</span>
             </div>
+
+            {error && (
+              <p className="text-xs text-red-500 font-medium text-center mb-3">{error}</p>
+            )}
 
             <button
               onClick={handleGenerate}
-              className="w-full py-4 rounded-2xl font-bold text-white text-base active:scale-[0.98] transition-transform"
+              disabled={loading}
+              className="w-full py-4 rounded-2xl font-bold text-white text-base active:scale-[0.98] transition-transform disabled:opacity-60"
               style={{ backgroundColor: "#F97316" }}
             >
-              Generar código
+              {loading ? "Generando…" : "Generar código"}
             </button>
           </>
         ) : (
           <>
             {/* Code display */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-4">
               <p className="text-sm text-[#6B7280] mb-4">
                 Compartí este código con las otras personas para que paguen su parte desde su Wallet
               </p>
@@ -133,6 +181,21 @@ export function SplitBillModal({ open, total, onClose }: SplitBillModalProps) {
                   {copied ? "¡Copiado!" : "Toca para copiar"}
                 </span>
               </button>
+            </div>
+
+            {/* Payment progress */}
+            <div
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl mb-4 text-sm font-semibold"
+              style={allPaid
+                ? { backgroundColor: "#F0FDF4", color: "#16A34A" }
+                : { backgroundColor: "#FFF7ED", color: "#F97316" }
+              }
+            >
+              {allPaid ? (
+                <><Check size={15} /> Todos pagaron su parte</>
+              ) : (
+                <>{paidCount} de {people - 1} {paidCount === 1 ? "persona pagó" : "personas pagaron"} su parte · faltan {pendingCount}</>
+              )}
             </div>
 
             {/* Split summary */}
