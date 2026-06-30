@@ -6,24 +6,44 @@ import { X, Users, Copy, Check } from "lucide-react"
 interface SplitBillModalProps {
   open: boolean
   total: number
+  orderId: string
   onClose: () => void
 }
 
-function generateCode(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
-}
-
-export function SplitBillModal({ open, total, onClose }: SplitBillModalProps) {
+export function SplitBillModal({ open, total, orderId, onClose }: SplitBillModalProps) {
   const [people, setPeople] = useState(2)
   const [code, setCode] = useState<string | null>(null)
+  const [perPerson, setPerPerson] = useState<number>(0)
   const [copied, setCopied] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!open) return null
 
-  const perPerson = (total / people).toFixed(2)
+  const previewPerPerson = (total / people).toFixed(2)
 
-  function handleGenerate() {
-    setCode(generateCode())
+  async function handleGenerate() {
+    if (!orderId) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/split-bills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, peopleCount: people }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        setError(data.error || "No se pudo generar el código")
+        return
+      }
+      setCode(data.code)
+      setPerPerson(data.amountPerPerson)
+    } catch {
+      setError("No se pudo generar el código")
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleCopy() {
@@ -35,8 +55,10 @@ export function SplitBillModal({ open, total, onClose }: SplitBillModalProps) {
 
   function handleClose() {
     setCode(null)
+    setPerPerson(0)
     setPeople(2)
     setCopied(false)
+    setError(null)
     onClose()
   }
 
@@ -102,15 +124,20 @@ export function SplitBillModal({ open, total, onClose }: SplitBillModalProps) {
             {/* Per person preview */}
             <div className="flex items-center justify-between px-4 py-3 bg-[#F0FDF4] rounded-2xl mb-6">
               <span className="text-sm text-[#16A34A]">Tu parte</span>
-              <span className="text-lg font-bold text-[#16A34A]">${Number(perPerson).toLocaleString("es-AR")}</span>
+              <span className="text-lg font-bold text-[#16A34A]">${Number(previewPerPerson).toLocaleString("es-AR")}</span>
             </div>
+
+            {error && (
+              <p className="text-xs text-red-500 font-medium text-center mb-3">{error}</p>
+            )}
 
             <button
               onClick={handleGenerate}
-              className="w-full py-4 rounded-2xl font-bold text-white text-base active:scale-[0.98] transition-transform"
+              disabled={loading}
+              className="w-full py-4 rounded-2xl font-bold text-white text-base active:scale-[0.98] transition-transform disabled:opacity-60"
               style={{ backgroundColor: "#F97316" }}
             >
-              Generar código
+              {loading ? "Generando…" : "Generar código"}
             </button>
           </>
         ) : (

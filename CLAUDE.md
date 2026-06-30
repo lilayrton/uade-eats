@@ -163,6 +163,15 @@ El `serviceFee` se guarda en `Order.serviceFee` y se registra en `PlatformTransa
 
 > **Distinción en webhook**: si `external_reference` empieza con `"wallet_"` → es recarga de wallet; si no → es pago de orden.
 
+### Dividir cuenta (split bill)
+El pedido ya fue pagado completo por su creador; dividir la cuenta **reembolsa al creador** vía wallet (transferencia 1:1 entre alumnos, **sin comisión**).
+1. El creador, desde "Mis pedidos" → "Dividir cuenta", elige N personas y `POST /api/split-bills` → crea `SplitBill` (`code` único, `orderId @unique`, `amountPerPerson = total / N`). Reabrir el modal devuelve el mismo código.
+2. Otro alumno ingresa el código en Wallet → "Pagar mi parte": `GET /api/split-bills/[code]` devuelve detalle + `slotsLeft`, `isCreator`, `alreadyPaid`.
+3. `POST /api/split-bills/[code]/pay` paga con wallet en una transacción: debita al pagador, acredita al creador, crea `SplitPayment` y dos `WalletTransaction` (`split_payment` negativo / `split_received` positivo).
+4. Validaciones: el creador no paga su parte, un usuario paga una sola vez (`@@unique([splitBillId, payerId])`), máximo `peopleCount - 1` pagos, saldo suficiente.
+
+> **WalletTransaction.type** suma: `"split_payment"` (parte pagada) | `"split_received"` (parte recibida por el creador).
+
 ### Sistema financiero de locales
 - Órdenes en **efectivo** generan deuda (`store.platformDebt`) en lugar de acreditar saldo
 - El local puede pagar su deuda con su saldo: `POST /api/store-portal/wallet/pay-debt`
@@ -204,5 +213,5 @@ Código `UADE2026` aplica 20% de descuento. Se valida en `POST /api/orders` y se
 | Sistema financiero de locales | ✅ Completo |
 | Panel de admin | ✅ Completo |
 | Reportes / estadísticas | ✅ Completo (página de reporte) |
-| Dividir cuenta (split bill) | ⬜ Pendiente (UI completa, backend no conectado) |
-| Pagar mi parte con wallet | ⬜ Pendiente |
+| Dividir cuenta (split bill) | ✅ Completo |
+| Pagar mi parte con wallet | ✅ Completo |

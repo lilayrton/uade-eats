@@ -46,6 +46,12 @@ function mapApiTransaction(tx: ApiTransaction): WalletTransaction {
   if (tx.type === "load") {
     return { id: tx.id, type: "ingreso", label: tx.description || "Carga de saldo", amount: tx.amount, date: dateStr }
   }
+  if (tx.type === "split_received") {
+    return { id: tx.id, type: "pago_dividido", label: tx.description || "Parte recibida", amount: Math.abs(tx.amount), date: dateStr }
+  }
+  if (tx.type === "split_payment") {
+    return { id: tx.id, type: "pago_dividido", label: tx.description || "Tu parte", amount: -Math.abs(tx.amount), date: dateStr }
+  }
   return { id: tx.id, type: "retiro", label: tx.description || "Pago", amount: -Math.abs(tx.amount), date: dateStr }
 }
 
@@ -105,16 +111,16 @@ function TransactionRow({ tx }: { tx: WalletTransaction }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-interface MockSplit {
+interface SplitLookup {
+  code: string
   storeName: string
   total: number
-  perPerson: number
-  people: number
-}
-
-const MOCK_SPLIT_DB: Record<string, MockSplit> = {
-  "UA4B2X": { storeName: "La Cantina", total: 4800, perPerson: 1600, people: 3 },
-  "TEST12": { storeName: "Cafetería UADE", total: 2000, perPerson: 1000, people: 2 },
+  amountPerPerson: number
+  peopleCount: number
+  paidCount: number
+  slotsLeft: number
+  isCreator: boolean
+  alreadyPaid: boolean
 }
 
 export default function WalletPage() {
@@ -122,13 +128,17 @@ export default function WalletPage() {
   const { cartCount } = useApp()
   const [loadOpen, setLoadOpen] = useState(false)
   const [codeInput, setCodeInput] = useState("")
-  const [foundSplit, setFoundSplit] = useState<MockSplit | null>(null)
+  const [foundSplit, setFoundSplit] = useState<SplitLookup | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [paid, setPaid] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [paying, setPaying] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
 
   const [balance, setBalance] = useState(0)
   const [transactions, setTransactions] = useState<WalletTransaction[]>([])
   const [walletLoading, setWalletLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     fetch("/api/wallet")
@@ -145,19 +155,51 @@ export default function WalletPage() {
       })
       .catch(console.error)
       .finally(() => setWalletLoading(false))
-  }, [loadOpen])
+  }, [loadOpen, refreshKey])
 
-  function handleSearch() {
+  async function handleSearch() {
     const key = codeInput.trim().toUpperCase()
-    const result = MOCK_SPLIT_DB[key]
-    if (result) {
-      setFoundSplit(result)
-      setNotFound(false)
-    } else {
-      setFoundSplit(null)
-      setNotFound(true)
-    }
+    if (!key) return
+    setSearching(true)
+    setNotFound(false)
+    setFoundSplit(null)
     setPaid(false)
+    setPayError(null)
+    try {
+      const res = await fetch(`/api/split-bills/${key}`)
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setFoundSplit({ code: key, ...data })
+      } else {
+        setNotFound(true)
+      }
+    } catch {
+      setNotFound(true)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  async function handlePay() {
+    if (!foundSplit) return
+    setPaying(true)
+    setPayError(null)
+    try {
+      const res = await fetch(`/api/split-bills/${foundSplit.code}/pay`, { method: "POST" })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setPaid(true)
+        setFoundSplit(null)
+        setBalance(data.balance)
+        setRefreshKey((k) => k + 1)
+      } else {
+        setPayError(data.error || "No se pudo procesar el pago")
+      }
+    } catch {
+      setPayError("No se pudo procesar el pago")
+    } finally {
+      setPaying(false)
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -236,6 +278,7 @@ export default function WalletPage() {
                     setFoundSplit(null)
                     setNotFound(false)
                     setPaid(false)
+                    setPayError(null)
                   }}
                   onKeyDown={handleKeyDown}
                   placeholder="Código (ej: UA4B2X)"
@@ -244,10 +287,11 @@ export default function WalletPage() {
                 />
                 <button
                   onClick={handleSearch}
-                  className="shrink-0 px-4 py-3 rounded-xl font-bold text-white text-sm active:scale-95 transition-transform flex items-center gap-1.5"
+                  disabled={searching}
+                  className="shrink-0 px-4 py-3 rounded-xl font-bold text-white text-sm active:scale-95 transition-transform flex items-center gap-1.5 disabled:opacity-60"
                   style={{ backgroundColor: "#1C1917" }}
                 >
-                  <Search size={15} />
+                  {searching ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
                   Buscar
                 </button>
               </div>
@@ -274,28 +318,55 @@ export default function WalletPage() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Personas</span>
-                      <span className="font-semibold text-foreground">{foundSplit.people}</span>
+                      <span className="font-semibold text-foreground">{foundSplit.peopleCount}</span>
                     </div>
                     <div className="h-px bg-border/40" />
                     <div className="flex justify-between">
                       <span className="font-bold text-foreground">Tu parte</span>
                       <span className="font-black text-lg" style={{ color: "#F97316" }}>
-                        ${foundSplit.perPerson.toLocaleString("es-AR")}
+                        ${foundSplit.amountPerPerson.toLocaleString("es-AR")}
                       </span>
                     </div>
-                    <div
-                      className="rounded-xl px-3 py-2 text-xs text-center font-medium mt-1"
-                      style={{ backgroundColor: "#FEF9C3", color: "#854D0E" }}
-                    >
-                      Saldo insuficiente — cargá tu wallet primero
-                    </div>
-                    <button
-                      disabled
-                      className="w-full py-3 rounded-xl font-bold text-white text-sm opacity-40 cursor-not-allowed mt-1"
-                      style={{ backgroundColor: "#F97316" }}
-                    >
-                      Confirmar pago · Próximamente
-                    </button>
+
+                    {(() => {
+                      const insufficient = balance < foundSplit.amountPerPerson
+                      let notice: { text: string; bg: string; color: string } | null = null
+                      if (foundSplit.isCreator) {
+                        notice = { text: "Sos quien generó la división, no podés pagar tu propia parte", bg: "#FEF2F2", color: "#B91C1C" }
+                      } else if (foundSplit.alreadyPaid) {
+                        notice = { text: "Ya pagaste tu parte de este pedido", bg: "#F0FDF4", color: "#16A34A" }
+                      } else if (foundSplit.slotsLeft <= 0) {
+                        notice = { text: "Esta división ya está completa", bg: "#F3F4F6", color: "#6B7280" }
+                      } else if (insufficient) {
+                        notice = { text: "Saldo insuficiente — cargá tu wallet primero", bg: "#FEF9C3", color: "#854D0E" }
+                      }
+
+                      const canPay = !foundSplit.isCreator && !foundSplit.alreadyPaid && foundSplit.slotsLeft > 0 && !insufficient
+
+                      return (
+                        <>
+                          {notice && (
+                            <div
+                              className="rounded-xl px-3 py-2 text-xs text-center font-medium mt-1"
+                              style={{ backgroundColor: notice.bg, color: notice.color }}
+                            >
+                              {notice.text}
+                            </div>
+                          )}
+                          {payError && (
+                            <p className="text-xs text-red-500 font-medium text-center mt-1">{payError}</p>
+                          )}
+                          <button
+                            onClick={handlePay}
+                            disabled={!canPay || paying}
+                            className="w-full py-3 rounded-xl font-bold text-white text-sm mt-1 active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ backgroundColor: "#F97316" }}
+                          >
+                            {paying ? "Procesando…" : "Confirmar pago"}
+                          </button>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
               )}

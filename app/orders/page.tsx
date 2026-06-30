@@ -37,7 +37,7 @@ export default function OrdersPage() {
   const [activeNav] = useState("orders")
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [splitOrder, setSplitOrder] = useState<{ total: number } | null>(null)
+  const [splitOrder, setSplitOrder] = useState<{ total: number; orderId: string } | null>(null)
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -231,7 +231,7 @@ export default function OrdersPage() {
 
                         {/* Split bill */}
                         <button
-                          onClick={() => setSplitOrder({ total: order.total })}
+                          onClick={() => setSplitOrder({ total: order.total, orderId: order.id })}
                           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed text-xs font-semibold transition-all active:scale-[0.98] mt-1"
                           style={{ borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }}
                         >
@@ -295,7 +295,7 @@ export default function OrdersPage() {
 
                       {order.status === "completed" && (
                         <button
-                          onClick={() => setSplitOrder({ total: order.total })}
+                          onClick={() => setSplitOrder({ total: order.total, orderId: order.id })}
                           className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed text-xs font-semibold transition-all active:scale-[0.98] mt-3"
                           style={{ borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }}
                         >
@@ -326,6 +326,7 @@ export default function OrdersPage() {
         <SplitBillModal
           open={!!splitOrder}
           total={splitOrder?.total ?? 0}
+          orderId={splitOrder?.orderId ?? ""}
           onClose={() => setSplitOrder(null)}
         />
       </div>
