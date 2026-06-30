@@ -5,19 +5,16 @@ import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   Store,
-  Banknote,
   CreditCard,
   Lock,
   Loader2,
-  Users,
   Wallet,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
-import { SplitBillModal } from "@/components/split-bill-modal"
 
-type PaymentId = "mercadopago" | "efectivo" | "tarjeta" | "wallet"
+type PaymentId = "mercadopago" | "tarjeta" | "wallet"
 
 interface PaymentMethod {
   id: PaymentId
@@ -28,7 +25,6 @@ interface PaymentMethod {
 
 const PAYMENT_METHODS: PaymentMethod[] = [
   { id: "mercadopago", label: "MercadoPago",         sublabel: "Pago digital" },
-  { id: "efectivo",    label: "Efectivo al retirar",  sublabel: "Pagás cuando retirás" },
   { id: "tarjeta",     label: "Tarjeta de crédito",   sublabel: "",              disabled: true },
 ]
 
@@ -102,12 +98,11 @@ export default function CheckoutPage() {
   const router = useRouter()
   const { state, dispatch } = useApp()
   const [step, setStep] = useState<1 | 2>(1)
-  const [selectedPayment, setSelectedPayment] = useState<PaymentId>("efectivo")
+  const [selectedPayment, setSelectedPayment] = useState<PaymentId>("mercadopago")
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [couponInput, setCouponInput] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null)
-  const [splitOpen, setSplitOpen] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
 
   const cart = state.cart
@@ -281,7 +276,6 @@ export default function CheckoutPage() {
               setCouponInput={setCouponInput}
               appliedCoupon={appliedCoupon}
               setAppliedCoupon={setAppliedCoupon}
-              onSplitBill={() => setSplitOpen(true)}
             />
           ) : (
             <Step2Content
@@ -330,11 +324,6 @@ export default function CheckoutPage() {
           )}
         </div>
 
-        <SplitBillModal
-          open={splitOpen}
-          total={total}
-          onClose={() => setSplitOpen(false)}
-        />
       </div>
     </div>
   )
@@ -354,7 +343,6 @@ function Step1Content({
   setCouponInput,
   appliedCoupon,
   setAppliedCoupon,
-  onSplitBill,
 }: {
   storeName: string
   items: Array<{ id: string; name: string; quantity: number; unitPrice: number }>
@@ -367,7 +355,6 @@ function Step1Content({
   setCouponInput: (val: string) => void
   appliedCoupon: string | null
   setAppliedCoupon: (val: string | null) => void
-  onSplitBill: () => void
 }) {
   return (
     <div className="pt-2 space-y-3">
@@ -472,17 +459,6 @@ function Step1Content({
         </div>
       </div>
 
-      {/* Split bill button */}
-      <div className="mx-4">
-        <button
-          onClick={onSplitBill}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-dashed font-semibold text-sm transition-all active:scale-[0.98]"
-          style={{ borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }}
-        >
-          <Users size={16} />
-          Dividir cuenta
-        </button>
-      </div>
     </div>
   )
 }
@@ -616,17 +592,6 @@ function PaymentMethodIcon({ id }: { id: PaymentId }) {
         }}
       >
         MP
-      </div>
-    )
-  }
-
-  if (id === "efectivo") {
-    return (
-      <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: "#F0FDF4" }}
-      >
-        <Banknote size={22} color="#16A34A" />
       </div>
     )
   }
