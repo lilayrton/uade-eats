@@ -21,11 +21,12 @@ interface PaymentMethod {
   label: string
   sublabel: string
   disabled?: boolean
+  comingSoon?: boolean
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = [
   { id: "mercadopago", label: "MercadoPago",         sublabel: "Pago digital" },
-  { id: "tarjeta",     label: "Tarjeta de crédito",   sublabel: "",              disabled: true },
+  { id: "tarjeta",     label: "Tarjeta de crédito",   sublabel: "",              disabled: true, comingSoon: true },
 ]
 
 // ── Step Indicator ────────────────────────────────────────────────────────────
@@ -158,8 +159,11 @@ export default function CheckoutPage() {
   }, [step, router])
 
   const handleContinue = useCallback(() => {
+    if (balance !== null && balance >= discountedSubtotal * 1.03) {
+      setSelectedPayment("wallet")
+    }
     setStep(2)
-  }, [])
+  }, [balance, discountedSubtotal])
 
   const handlePay = useCallback(async () => {
     if (isProcessing) return
@@ -283,6 +287,7 @@ export default function CheckoutPage() {
               onSelect={setSelectedPayment}
               total={total}
               balance={balance}
+              discountedSubtotal={discountedSubtotal}
             />
           )}
         </main>
@@ -470,18 +475,42 @@ function Step2Content({
   onSelect,
   total,
   balance,
+  discountedSubtotal,
 }: {
   selectedPayment: PaymentId
   onSelect: (id: PaymentId) => void
   total: number
   balance: number | null
+  discountedSubtotal: number
 }) {
+  const walletState =
+    balance === null      ? "loading"
+    : balance < total     ? "insufficient"
+    : "available"
+
+  const shortage = walletState === "insufficient" ? Math.ceil(total - balance!) : 0
+  // Savings vs MercadoPago (2% diff): only meaningful when wallet is available
+  const savings  = walletState === "available"    ? Math.round(discountedSubtotal * 0.02) : 0
+
+  const walletSublabel =
+    walletState === "loading"      ? "Cargando saldo..."
+    : walletState === "insufficient" ? `Saldo: $${balance!.toLocaleString("es-AR")} · Te faltan $${shortage.toLocaleString("es-AR")}`
+    : `Saldo disponible: $${balance!.toLocaleString("es-AR")}`
+
+  const walletDisabled = walletState !== "available"
+
+  const walletOpacity =
+    walletState === "loading"      ? "opacity-40"
+    : walletState === "insufficient" ? "opacity-60"
+    : ""
+
   const methods = [
     {
       id: "wallet" as PaymentId,
       label: "Mi Wallet",
-      sublabel: balance !== null ? `Saldo disponible: $${balance.toLocaleString("es-AR")}` : "Cargando saldo...",
-      disabled: balance === null || balance < total,
+      sublabel: walletSublabel,
+      disabled: walletDisabled,
+      comingSoon: false,
     },
     ...PAYMENT_METHODS
   ]
@@ -495,6 +524,12 @@ function Step2Content({
       <div className="mx-4 space-y-3">
         {methods.map((method) => {
           const isSelected = selectedPayment === method.id
+          const isWallet = method.id === "wallet"
+
+          const disabledClass = method.disabled
+            ? `${isWallet ? walletOpacity : "opacity-50"} cursor-not-allowed`
+            : "active:scale-[0.98]"
+
           return (
             <button
               key={method.id}
@@ -503,9 +538,7 @@ function Step2Content({
               aria-pressed={isSelected}
               className={cn(
                 "w-full flex items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left transition-all duration-150",
-                method.disabled
-                  ? "opacity-50 cursor-not-allowed"
-                  : "active:scale-[0.98]",
+                disabledClass,
                 isSelected && !method.disabled
                   ? "border-[#F97316] bg-[#FFF0E6]"
                   : "border-[#F3F4F6] bg-white"
@@ -520,15 +553,37 @@ function Step2Content({
                   <span className="text-sm font-semibold text-[#1C1917]">
                     {method.label}
                   </span>
-                  {method.id === "wallet" && (
+
+                  {/* Wallet: badge según estado */}
+                  {isWallet && walletState === "available" && (
+                    <>
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
+                      >
+                        Menor comisión (3%)
+                      </span>
+                      {savings > 0 && (
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
+                        >
+                          Ahorrás ${savings.toLocaleString("es-AR")}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {isWallet && walletState === "insufficient" && (
                     <span
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
+                      style={{ backgroundColor: "#FEF3C7", color: "#D97706" }}
                     >
-                      Menor comisión (3%)
+                      Saldo insuficiente
                     </span>
                   )}
-                  {method.disabled && (
+
+                  {/* Tarjeta y otros: solo si comingSoon */}
+                  {method.comingSoon && (
                     <span
                       className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                       style={{ backgroundColor: "#F3F4F6", color: "#9CA3AF" }}

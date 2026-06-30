@@ -424,8 +424,8 @@ export default function StorePortalPage() {
       <div className="w-full max-w-[1000px] min-h-svh flex flex-col bg-white shadow-lg relative border-x border-[#E5E7EB]">
 
         {/* ── Desktop/Tablet Header ── */}
-        <header className="bg-white border-b border-[#F3F4F6] sticky top-0 z-40 px-6 py-4 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
+        <header className="bg-white border-b border-[#F3F4F6] sticky top-0 z-40 px-3 md:px-6 py-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => router.push("/profile")}
@@ -436,11 +436,11 @@ export default function StorePortalPage() {
               </button>
               <div>
                 <h1 className="text-xl font-black text-[#1C1917]">Portal de Administración</h1>
-                <p className="text-xs text-muted-foreground font-semibold mt-0.5">UADE EATS COMEDORES</p>
+                <p className="text-xs text-muted-foreground font-semibold mt-0.5">{state.user?.name || ""}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2 shrink-0">
               <span className="text-xs font-semibold px-2 py-1 bg-green-50 text-green-700 rounded-full border border-green-200 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
                 Monitoreo en tiempo real
@@ -502,7 +502,7 @@ export default function StorePortalPage() {
           </div>
           {/* ── KPIs Bar (Hidden on Products and Wallet View) ── */}
           {activeTab !== "products" && activeTab !== "wallet" && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
               <div className="bg-[#FFF7ED] border border-[#FFEDD5] p-3 rounded-2xl flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#F97316]/10 text-[#F97316] shrink-0">
                   <Clock size={20} />
@@ -548,23 +548,23 @@ export default function StorePortalPage() {
           )}
 
           {/* ── Main Tab Switcher ── */}
-          <div className="flex bg-[#F3F4F6] p-1 rounded-2xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1 md:gap-0 bg-[#F3F4F6] p-1 rounded-2xl">
             <button
               onClick={() => setActiveTab("active")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "active"
+              className={`py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "active"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
                 }`}
             >
               <ChefHat size={14} />
-              Pedidos Activos
+              <span className="hidden sm:inline">Pedidos </span>Activos
               <span className="bg-[#F97316] text-white text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">
                 {activeOrders.length}
               </span>
             </button>
             <button
               onClick={() => setActiveTab("completed")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "completed"
+              className={`py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "completed"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
                 }`}
@@ -577,20 +577,20 @@ export default function StorePortalPage() {
             </button>
             <button
               onClick={() => setActiveTab("products")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "products"
+              className={`py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "products"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
                 }`}
             >
               <FolderOpen size={14} />
-              Gestionar Menú
+              <span className="hidden sm:inline">Gestionar </span>Menú
               <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">
                 {products.length}
               </span>
             </button>
             <button
               onClick={() => setActiveTab("wallet")}
-              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "wallet"
+              className={`py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "wallet"
                   ? "bg-white text-[#1C1917] shadow-sm"
                   : "text-muted-foreground hover:text-[#1C1917]"
                 }`}
@@ -602,7 +602,7 @@ export default function StorePortalPage() {
         </header>
 
         {/* ── Content Body ── */}
-        <main className="flex-1 p-6 overflow-y-auto space-y-6">
+        <main className="flex-1 p-3 md:p-6 overflow-y-auto space-y-6">
 
           {/* Active Orders Section */}
           {activeTab === "active" && (
@@ -649,7 +649,7 @@ export default function StorePortalPage() {
               {filteredActiveOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 bg-[#F9F5F0] rounded-3xl border border-dashed border-[#E5E7EB]">
                   <ShoppingBag size={48} className="text-muted-foreground/40 animate-pulse" />
-                  <p className="mt-4 font-bold text-muted-foreground text-sm">No hay pedidos activos en este estado</p>
+                  <p className="mt-4 font-bold text-muted-foreground text-sm">No hay pedidos activos</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1163,7 +1163,7 @@ export default function StorePortalPage() {
 
         {/* Footer info */}
         <footer className="py-6 border-t border-[#F3F4F6] text-center bg-[#F9F5F0]">
-          <p className="text-xs text-muted-foreground">UADE EATS COMEDORES · Panel de Control Oficial · v1.0</p>
+          <p className="text-xs text-muted-foreground">UADE EATS · Panel de Control · v1.0</p>
         </footer>
 
       </div>

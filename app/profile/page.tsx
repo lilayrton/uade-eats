@@ -31,13 +31,6 @@ interface SettingGroup {
 
 const SETTINGS: SettingGroup[] = [
   {
-    title: "Cuenta",
-    items: [
-      { icon: User, label: "Información personal" },
-      { icon: CreditCard, label: "Métodos de pago" },
-    ],
-  },
-  {
     title: "Preferencias",
     items: [
       { icon: Bell, label: "Notificaciones" },
