@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronRight, MapPin, CheckCircle2, Loader2, Store, Users } from "lucide-react"
+import { MapPin, CheckCircle2, Loader2, Store, Users } from "lucide-react"
 import { BottomNav } from "@/components/bottom-nav"
 import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
@@ -37,7 +37,16 @@ export default function OrdersPage() {
   const [activeNav] = useState("orders")
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [splitOrder, setSplitOrder] = useState<{ total: number; orderId: string } | null>(null)
+  const [splitOrder, setSplitOrder] = useState<{
+    total: number
+    orderId: string
+    existingSplit?: {
+      code: string
+      peopleCount: number
+      amountPerPerson: number
+      paidCount: number
+    }
+  } | null>(null)
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -230,14 +239,40 @@ export default function OrdersPage() {
                         </div>
 
                         {/* Split bill */}
-                        <button
-                          onClick={() => setSplitOrder({ total: order.total, orderId: order.id })}
-                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed text-xs font-semibold transition-all active:scale-[0.98] mt-1"
-                          style={{ borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }}
-                        >
-                          <Users size={13} />
-                          Dividir cuenta
-                        </button>
+                        {(() => {
+                          const split = order.splitBill
+                          const paidCount = split?._count?.payments ?? 0
+                          const allPaid = split && paidCount >= split.peopleCount - 1
+                          return (
+                            <button
+                              onClick={() => setSplitOrder({
+                                total: order.total,
+                                orderId: order.id,
+                                existingSplit: split ? {
+                                  code: split.code,
+                                  peopleCount: split.peopleCount,
+                                  amountPerPerson: split.amountPerPerson,
+                                  paidCount,
+                                } : undefined,
+                              })}
+                              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] mt-1 border"
+                              style={
+                                allPaid
+                                  ? { borderColor: "#16A34A", color: "#16A34A", backgroundColor: "#F0FDF4" }
+                                  : split
+                                  ? { borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }
+                                  : { borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED", borderStyle: "dashed" }
+                              }
+                            >
+                              <Users size={13} />
+                              {allPaid
+                                ? "Cuenta dividida ✓"
+                                : split
+                                ? `Split activo · ${paidCount}/${split.peopleCount - 1} pagaron`
+                                : "Dividir cuenta"}
+                            </button>
+                          )
+                        })()}
                       </div>
                     </div>
                   )
@@ -277,7 +312,10 @@ export default function OrdersPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-bold text-sm text-foreground truncate">{order.store.name}</p>
-                            <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
+                            <span className={cn(
+                              "shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                              order.status === "completed" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+                            )}>
                               {order.status === "completed" ? "Completado" : "Cancelado"}
                             </span>
                           </div>
@@ -290,19 +328,42 @@ export default function OrdersPage() {
                           </div>
                         </div>
 
-                        <ChevronRight size={16} className="text-muted-foreground shrink-0" />
                       </div>
 
-                      {order.status === "completed" && (
-                        <button
-                          onClick={() => setSplitOrder({ total: order.total, orderId: order.id })}
-                          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed text-xs font-semibold transition-all active:scale-[0.98] mt-3"
-                          style={{ borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }}
-                        >
-                          <Users size={13} />
-                          Dividir cuenta
-                        </button>
-                      )}
+                      {order.status === "completed" && (() => {
+                        const split = order.splitBill
+                        const paidCount = split?._count?.payments ?? 0
+                        const allPaid = split && paidCount >= split.peopleCount - 1
+                        return (
+                          <button
+                            onClick={() => setSplitOrder({
+                              total: order.total,
+                              orderId: order.id,
+                              existingSplit: split ? {
+                                code: split.code,
+                                peopleCount: split.peopleCount,
+                                amountPerPerson: split.amountPerPerson,
+                                paidCount,
+                              } : undefined,
+                            })}
+                            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] mt-3 border"
+                            style={
+                              allPaid
+                                ? { borderColor: "#16A34A", color: "#16A34A", backgroundColor: "#F0FDF4" }
+                                : split
+                                ? { borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED" }
+                                : { borderColor: "#F97316", color: "#F97316", backgroundColor: "#FFF7ED", borderStyle: "dashed" }
+                            }
+                          >
+                            <Users size={13} />
+                            {allPaid
+                              ? "Cuenta dividida ✓"
+                              : split
+                              ? `Split activo · ${paidCount}/${split.peopleCount - 1} pagaron`
+                              : "Dividir cuenta"}
+                          </button>
+                        )
+                      })()}
                     </div>
                   )
                 })}
@@ -327,6 +388,7 @@ export default function OrdersPage() {
           open={!!splitOrder}
           total={splitOrder?.total ?? 0}
           orderId={splitOrder?.orderId ?? ""}
+          existingSplit={splitOrder?.existingSplit}
           onClose={() => setSplitOrder(null)}
         />
       </div>
