@@ -49,6 +49,17 @@ export async function POST(req: Request) {
     }
 
     const isMP = paymentMethod === "mercadopago"
+    const isWallet = paymentMethod === "wallet"
+    const isEfectivo = paymentMethod === "efectivo"
+    
+    const serviceFeePercentage = isWallet ? 0.03 : 0.05
+    const serviceFee = total * serviceFeePercentage
+    
+    // Store revenue is the subtotal
+    const storeRevenue = total
+    
+    // Total charged to student includes service fee
+    total = total + serviceFee
     
     // Clean up any previous ghost orders that the user abandoned
     if (isMP) {
@@ -58,12 +69,23 @@ export async function POST(req: Request) {
       })
     }
 
+    if (isWallet) {
+      const user = await db.user.findUnique({ where: { id: session.id } })
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 })
+      }
+      if (user.walletBalance < total) {
+        return NextResponse.json({ error: "Saldo insuficiente en tu wallet" }, { status: 400 })
+      }
+    }
+
     // Create the order
     const order = await db.order.create({
       data: {
         userId: session.id,
         storeId,
         total,
+        serviceFee,
         status: isMP ? "pending_payment" : "pending",
         paymentMethod: paymentMethod || "efectivo",
         notes: notes || null,
@@ -81,6 +103,58 @@ export async function POST(req: Request) {
         }
       }
     })
+
+    if (isWallet) {
+      await db.user.update({
+        where: { id: session.id },
+        data: { walletBalance: { decrement: total } }
+      })
+
+      await db.store.update({
+        where: { id: storeId },
+        data: { walletBalance: { increment: storeRevenue } }
+      })
+
+      await db.storeWalletTransaction.create({
+        data: {
+          storeId: storeId,
+          type: "payment_received",
+          amount: storeRevenue,
+          description: `Cobro a ${session.id}` // simplified
+        }
+      })
+
+      await db.walletTransaction.create({
+        data: {
+          userId: session.id,
+          type: "payment",
+          amount: -total,
+          status: "completed",
+          description: `Pago de pedido`
+        }
+      })
+    }
+
+    if (isEfectivo) {
+      await db.store.update({
+        where: { id: storeId },
+        data: { platformDebt: { increment: serviceFee } }
+      })
+      // No creamos PlatformTransaction acá. La comisión real "entra" al sistema 
+      // recién cuando el local paga esta deuda generada.
+    }
+
+    if (isWallet) {
+      await db.platformTransaction.create({
+        data: {
+          amount: serviceFee,
+          type: "service_fee",
+          description: `Comisión por pedido (${paymentMethod})`,
+          storeId: storeId,
+          orderId: order.id
+        }
+      })
+    }
 
     if (isMP) {
       try {
@@ -113,7 +187,6 @@ export async function POST(req: Request) {
           }
           preferenceBody.auto_return = "approved"
         }
-
         const preferenceResult = await mpPreference.create({
           body: preferenceBody
         })

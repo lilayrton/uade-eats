@@ -60,13 +60,45 @@ export async function POST(req: Request) {
           })
 
           if (order && (order.status === "pending_payment" || order.status === "cancelled" || order.status === "abandoned")) {
-            const updatedOrder = await db.order.update({
-              where: { id: orderId },
-              data: { status: "pending" }
+            const processedOrder = await db.$transaction(async (tx) => {
+              const result = await tx.order.updateMany({
+                where: { id: orderId, status: "pending_payment" },
+                data: { status: "pending" }
+              })
+              
+              if (result.count === 0) {
+                return null
+              }
+              
+              const currentOrder = await tx.order.findUnique({ where: { id: orderId } })
+              if (!currentOrder) return null
+
+              const actualServiceFee = currentOrder.serviceFee
+              const storeRevenue = currentOrder.total - currentOrder.serviceFee
+              
+              // Acreditar subtotal al local
+              await tx.store.update({
+                where: { id: currentOrder.storeId },
+                data: { walletBalance: { increment: storeRevenue } }
+              })
+              
+              // Registrar comisión para la plataforma
+              await tx.platformTransaction.create({
+                data: {
+                  amount: actualServiceFee,
+                  type: "service_fee",
+                  description: `Comisión MP Webhook (5%) - Pedido #${currentOrder.pickupCode || currentOrder.id.slice(-4)}`,
+                  storeId: currentOrder.storeId
+                }
+              })
+
+              return currentOrder
             })
 
-            dispatchEvent("new_order", { orderId: updatedOrder.id, storeId: updatedOrder.storeId })
-            console.log(`Order ${orderId} successfully marked as PAID and dispatched via SSE!`)
+            if (processedOrder) {
+              dispatchEvent("new_order", { orderId: processedOrder.id, storeId: processedOrder.storeId })
+              console.log(`Order ${orderId} successfully marked as PAID and funds distributed!`)
+            }
           }
         }
       }

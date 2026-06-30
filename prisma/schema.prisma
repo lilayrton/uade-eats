@@ -43,11 +43,27 @@ model Store {
   estimatedWaitMinutes Int
   isOpen               Boolean   @default(true)
   rating               Float
+  walletBalance        Float     @default(0)
+  platformDebt         Float     @default(0)
   createdAt            DateTime   @default(now())
-  products             Product[]
-  orders               Order[]
-  users                User[]
-  categories           Category[]
+  bankInfo             String?    // CVU/CBU/Alias para retiros
+  products               Product[]
+  orders                 Order[]
+  users                  User[]
+  categories             Category[]
+  storeWalletTransactions StoreWalletTransaction[]
+  platformTransactions   PlatformTransaction[]
+}
+
+model StoreWalletTransaction {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  type        String   // "payment_received" | "withdrawal" | "debt_payment"
+  amount      Float
+  status      String   @default("completed") // "pending" | "completed" | "rejected"
+  description String?
+  createdAt   DateTime @default(now())
 }
 
 model Category {
@@ -84,13 +100,15 @@ model Order {
   storeId       String
   store         Store       @relation(fields: [storeId], references: [id])
   total         Float
+  serviceFee    Float       @default(0)
   status        String      @default("pending") // "pending", "preparing", "ready", "completed", "cancelled"
-  paymentMethod String
+  paymentMethod String      @default("mercadopago") // mercadopago, efectivo, tarjeta, wallet
   pickupCode    Int
   notes         String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   items         OrderItem[]
+  platformTransactions PlatformTransaction[]
 }
 
 model OrderItem {
@@ -101,4 +119,16 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
   quantity  Int
   unitPrice Float
+}
+
+model PlatformTransaction {
+  id          String   @id @default(cuid())
+  amount      Float
+  type        String   // "service_fee" | "debt_payment"
+  description String?
+  storeId     String?
+  store       Store?   @relation(fields: [storeId], references: [id])
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  createdAt   DateTime @default(now())
 }

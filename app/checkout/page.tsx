@@ -10,13 +10,14 @@ import {
   Lock,
   Loader2,
   Users,
+  Wallet,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
 import { SplitBillModal } from "@/components/split-bill-modal"
 
-type PaymentId = "mercadopago" | "efectivo" | "tarjeta"
+type PaymentId = "mercadopago" | "efectivo" | "tarjeta" | "wallet"
 
 interface PaymentMethod {
   id: PaymentId
@@ -107,6 +108,7 @@ export default function CheckoutPage() {
   const [couponInput, setCouponInput] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null)
   const [splitOpen, setSplitOpen] = useState(false)
+  const [balance, setBalance] = useState<number | null>(null)
 
   const cart = state.cart
   const storeName = cart.storeName ?? "UADE Eats"
@@ -115,6 +117,21 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     setMounted(true)
+    fetch(`/api/wallet?t=${Date.now()}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          setBalance(data.balance)
+        } else {
+          toast.error("No se pudo cargar la billetera", { description: data.error || "No autorizado" })
+          setBalance(0)
+        }
+      })
+      .catch((e) => {
+        console.error(e)
+        toast.error("Error de conexión al cargar la billetera")
+        setBalance(0)
+      })
   }, [])
 
   useEffect(() => {
@@ -125,7 +142,13 @@ export default function CheckoutPage() {
 
   const subtotal = cart.items.reduce((sum, item) => sum + item.quantity * item.product.price, 0)
   const discount = appliedCoupon === "UADE2026" ? subtotal * 0.20 : 0
-  const total = subtotal - discount
+  const discountedSubtotal = subtotal - discount
+  
+  // Service fee logic
+  const serviceFeePercentage = selectedPayment === "wallet" ? 0.03 : 0.05
+  const serviceFee = discountedSubtotal * serviceFeePercentage
+  
+  const total = discountedSubtotal + serviceFee
 
   const orderItems = cart.items.map((ci) => ({
     id: ci.product.id,
@@ -251,6 +274,8 @@ export default function CheckoutPage() {
               items={orderItems}
               subtotal={subtotal}
               discount={discount}
+              serviceFee={serviceFee}
+              serviceFeePercentage={serviceFeePercentage}
               total={total}
               couponInput={couponInput}
               setCouponInput={setCouponInput}
@@ -262,6 +287,8 @@ export default function CheckoutPage() {
             <Step2Content
               selectedPayment={selectedPayment}
               onSelect={setSelectedPayment}
+              total={total}
+              balance={balance}
             />
           )}
         </main>
@@ -296,7 +323,7 @@ export default function CheckoutPage() {
               ) : (
                 <>
                   <Lock size={15} />
-                  Pagar ${total.toLocaleString("es-AR")}
+                  Pagar ${total.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
                 </>
               )}
             </button>
@@ -320,6 +347,8 @@ function Step1Content({
   items,
   subtotal,
   discount,
+  serviceFee,
+  serviceFeePercentage,
   total,
   couponInput,
   setCouponInput,
@@ -331,6 +360,8 @@ function Step1Content({
   items: Array<{ id: string; name: string; quantity: number; unitPrice: number }>
   subtotal: number
   discount: number
+  serviceFee: number
+  serviceFeePercentage: number
   total: number
   couponInput: string
   setCouponInput: (val: string) => void
@@ -419,12 +450,9 @@ function Step1Content({
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-[#6B7280]">Costo de servicio</span>
-          <span
-            className="text-xs font-semibold px-2 py-0.5 rounded-full"
-            style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
-          >
-            Gratis
+          <span className="text-[#6B7280]">Costo de servicio ({serviceFeePercentage * 100}%)</span>
+          <span className="text-[#1C1917] font-medium">
+            ${serviceFee.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
           </span>
         </div>
         {discount > 0 && (
@@ -439,7 +467,7 @@ function Step1Content({
         <div className="flex items-center justify-between">
           <span className="font-bold text-[#1C1917]">Total</span>
           <span className="text-lg font-bold" style={{ color: "#F97316" }}>
-            ${total.toLocaleString("es-AR")}
+            ${total.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
           </span>
         </div>
       </div>
@@ -464,10 +492,24 @@ function Step1Content({
 function Step2Content({
   selectedPayment,
   onSelect,
+  total,
+  balance,
 }: {
   selectedPayment: PaymentId
   onSelect: (id: PaymentId) => void
+  total: number
+  balance: number | null
 }) {
+  const methods = [
+    {
+      id: "wallet" as PaymentId,
+      label: "Mi Wallet",
+      sublabel: balance !== null ? `Saldo disponible: $${balance.toLocaleString("es-AR")}` : "Cargando saldo...",
+      disabled: balance === null || balance < total,
+    },
+    ...PAYMENT_METHODS
+  ]
+
   return (
     <div className="pt-2">
       <p className="mx-4 mt-4 mb-3 font-bold text-[#1C1917] text-base">
@@ -475,7 +517,7 @@ function Step2Content({
       </p>
 
       <div className="mx-4 space-y-3">
-        {PAYMENT_METHODS.map((method) => {
+        {methods.map((method) => {
           const isSelected = selectedPayment === method.id
           return (
             <button
@@ -502,6 +544,14 @@ function Step2Content({
                   <span className="text-sm font-semibold text-[#1C1917]">
                     {method.label}
                   </span>
+                  {method.id === "wallet" && (
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
+                    >
+                      Menor comisión (3%)
+                    </span>
+                  )}
                   {method.disabled && (
                     <span
                       className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
@@ -546,6 +596,17 @@ function Step2Content({
 // ── Payment Method Icon ───────────────────────────────────────────────────────
 
 function PaymentMethodIcon({ id }: { id: PaymentId }) {
+  if (id === "wallet") {
+    return (
+      <div
+        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: "#FFF0E6" }}
+      >
+        <Wallet size={22} color="#F97316" />
+      </div>
+    )
+  }
+
   if (id === "mercadopago") {
     return (
       <div

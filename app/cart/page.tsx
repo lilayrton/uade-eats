@@ -20,6 +20,8 @@ export default function CartPage() {
     (sum, item) => sum + item.quantity * item.product.price,
     0
   )
+  const estimatedServiceFee = subtotal * 0.05
+  const estimatedTotal = subtotal + estimatedServiceFee
   const isEmpty = cartItems.length === 0
 
   const handleAdd = useCallback(
@@ -155,19 +157,16 @@ export default function CartPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Costo de servicio</span>
-                  <span
-                    className="font-semibold text-xs px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
-                  >
-                    Gratis
+                  <span className="text-muted-foreground">Costo de servicio (5%)</span>
+                  <span className="font-semibold text-foreground">
+                    ${estimatedServiceFee.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
                   </span>
                 </div>
                 <div className="h-px bg-border" />
                 <div className="flex items-center justify-between">
                   <span className="font-black text-foreground text-base">Total</span>
                   <span className="font-black text-foreground text-xl">
-                    ${subtotal.toLocaleString("es-AR")}
+                    ${estimatedTotal.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
                     <span className="text-xs font-medium text-muted-foreground ml-1">ARS</span>
                   </span>
                 </div>
@@ -182,7 +181,7 @@ export default function CartPage() {
               >
                 <span className="text-base">Confirmar pedido</span>
                 <span className="text-base font-black">
-                  ${subtotal.toLocaleString("es-AR")}
+                  ${estimatedTotal.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
                 </span>
               </button>
 

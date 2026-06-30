@@ -16,9 +16,10 @@ import {
   PackageCheck,
   Edit2,
   Trash2,
-  Plus,
   Image as ImageIcon,
-  FolderOpen
+  FolderOpen,
+  Wallet,
+  Banknote
 } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/context/AppContext"
@@ -39,6 +40,15 @@ interface Product {
   imageUrl: string
 }
 
+interface StoreWalletTransaction {
+  id: string
+  type: string
+  amount: number
+  status: string
+  description: string
+  createdAt: string
+}
+
 export default function StorePortalPage() {
   const router = useRouter()
   const { state } = useApp()
@@ -47,10 +57,20 @@ export default function StorePortalPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState<"active" | "completed" | "products">("active")
+  const [activeTab, setActiveTab] = useState<"active" | "completed" | "products" | "wallet">("active")
   const [selectedFilter, setSelectedFilter] = useState<"all" | "pending" | "preparing" | "ready">("all")
   const [isOpen, setIsOpen] = useState(true)
   const [statusLoading, setStatusLoading] = useState(false)
+  const [storeWalletBalance, setStoreWalletBalance] = useState(0)
+  const [platformDebt, setPlatformDebt] = useState(0)
+  const [withdrawLoading, setWithdrawLoading] = useState(false)
+  const [payDebtLoading, setPayDebtLoading] = useState(false)
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false)
+  const [bankInfo, setBankInfo] = useState("")
+  const [isEditingBankInfo, setIsEditingBankInfo] = useState(false)
+  const [bankInfoLoading, setBankInfoLoading] = useState(false)
+  const [walletTransactions, setWalletTransactions] = useState<StoreWalletTransaction[]>([])
+  const [transactionsLoading, setTransactionsLoading] = useState(false)
 
   // Products State
   const [products, setProducts] = useState<Product[]>([])
@@ -85,6 +105,9 @@ export default function StorePortalPage() {
       const data = await res.json()
       if (data.success) {
         setIsOpen(data.isOpen)
+        if (data.walletBalance !== undefined) setStoreWalletBalance(data.walletBalance)
+        if (data.platformDebt !== undefined) setPlatformDebt(data.platformDebt)
+        if (data.bankInfo !== undefined) setBankInfo(data.bankInfo || "")
       }
     } catch (e) {
       console.error(e)
@@ -146,6 +169,51 @@ export default function StorePortalPage() {
     }
   }, [])
 
+  const fetchWalletTransactions = useCallback(async () => {
+    setTransactionsLoading(true)
+    try {
+      const res = await fetch(`/api/store-portal/wallet/transactions?t=${Date.now()}`, { cache: "no-store" })
+      const data = await res.json()
+      if (data.success) {
+        setWalletTransactions(data.transactions)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setTransactionsLoading(false)
+    }
+  }, [])
+
+  const handlePayDebt = async () => {
+    if (platformDebt <= 0) return
+    if (storeWalletBalance < platformDebt) {
+      toast.error("No tenés suficiente saldo en la billetera para pagar toda la deuda.")
+      return
+    }
+    
+    setPayDebtLoading(true)
+    try {
+      const res = await fetch("/api/store-portal/wallet/pay-debt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: platformDebt })
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast.success(data.message)
+        fetchStoreStatus()
+        fetchWalletTransactions()
+      } else {
+        toast.error(data.error || "Error al pagar deuda")
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error("Error de conexión")
+    } finally {
+      setPayDebtLoading(false)
+    }
+  }
+
   // Check role client-side
   useEffect(() => {
     if (state.user && state.user.role !== "store_owner") {
@@ -167,7 +235,11 @@ export default function StorePortalPage() {
           fetchOrders(false)
           toast.info("¡Nuevo pedido recibido! 🔔", { duration: 4000 })
         } else if (type === "order_updated") {
-          fetchOrders(false)
+          if (data.order) {
+            setOrders(prev => prev.map(o => o.id === data.orderId ? data.order : o))
+          } else {
+            fetchOrders(false)
+          }
         }
       } catch (err) {
         console.error("SSE parse error:", err)
@@ -178,14 +250,8 @@ export default function StorePortalPage() {
       console.error("SSE connection error:", err)
     }
 
-    // Polling fallback every 5 seconds para Vercel serverless
-    const interval = setInterval(() => {
-      fetchOrders(false)
-    }, 5000)
-
     return () => {
       eventSource.close()
-      clearInterval(interval)
     }
   }, [fetchOrders, storeId])
 
@@ -194,9 +260,19 @@ export default function StorePortalPage() {
     if (activeTab === "products") {
       fetchProducts()
     }
-  }, [activeTab, fetchProducts])
+    if (activeTab === "wallet") {
+      fetchWalletTransactions()
+    }
+  }, [activeTab, fetchProducts, fetchWalletTransactions])
 
   const handleUpdateStatus = async (orderId: string, status: OrderStatus) => {
+    const previousOrders = [...orders]
+    
+    // Delay artificial de 300ms para evitar saltos bruscos en la interfaz (UX)
+    await new Promise(r => setTimeout(r, 300))
+    
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+
     try {
       const res = await fetch("/api/store-portal/orders", {
         method: "PATCH",
@@ -215,9 +291,11 @@ export default function StorePortalPage() {
 
         toast.success(msg, { duration: 3000 })
       } else {
+        setOrders(previousOrders)
         toast.error("Error al actualizar estado", { description: data.error })
       }
     } catch (e) {
+      setOrders(previousOrders)
       console.error(e)
       toast.error("Error de conexión al actualizar")
     }
@@ -366,7 +444,7 @@ export default function StorePortalPage() {
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
                 Monitoreo en tiempo real
               </span>
-              {activeTab !== "products" && (
+              {activeTab !== "products" && activeTab !== "wallet" && (
                 <button
                   onClick={() => fetchOrders(true)}
                   disabled={refreshing}
@@ -421,8 +499,8 @@ export default function StorePortalPage() {
               />
             </button>
           </div>
-          {/* ── KPIs Bar (Hidden on Products View) ── */}
-          {activeTab !== "products" && (
+          {/* ── KPIs Bar (Hidden on Products and Wallet View) ── */}
+          {activeTab !== "products" && activeTab !== "wallet" && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
               <div className="bg-[#FFF7ED] border border-[#FFEDD5] p-3 rounded-2xl flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#F97316]/10 text-[#F97316] shrink-0">
@@ -508,6 +586,16 @@ export default function StorePortalPage() {
               <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">
                 {products.length}
               </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("wallet")}
+              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === "wallet"
+                  ? "bg-white text-[#1C1917] shadow-sm"
+                  : "text-muted-foreground hover:text-[#1C1917]"
+                }`}
+            >
+              <Wallet size={14} />
+              Mi Billetera
             </button>
           </div>
         </header>
@@ -655,7 +743,7 @@ export default function StorePortalPage() {
                             Ingreso: {formatDate(order.createdAt)}
                           </span>
                           <span className="font-semibold uppercase tracking-wider text-[10px] bg-card border border-border px-2 py-0.5 rounded-lg">
-                            {order.paymentMethod === "efectivo" ? "💵 Efectivo" : "💳 Tarjeta"}
+                            {order.paymentMethod === "efectivo" ? "💵 Efectivo" : order.paymentMethod === "wallet" ? "💰 Wallet" : "💳 Tarjeta"}
                           </span>
                         </div>
                       </div>
@@ -775,7 +863,7 @@ export default function StorePortalPage() {
 
                       <div className="flex items-center justify-between md:justify-end gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-[#F3F4F6]">
                         <span className="text-xs font-semibold text-muted-foreground">
-                          {order.paymentMethod === "efectivo" ? "Efectivo" : "Tarjeta"}
+                          {order.paymentMethod === "efectivo" ? "Efectivo" : order.paymentMethod === "wallet" ? "Wallet" : "Tarjeta"}
                         </span>
                         <span
                           className={`text-xs font-bold px-3 py-1 rounded-full ${order.status === "completed"
@@ -790,6 +878,176 @@ export default function StorePortalPage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Wallet Management Section */}
+          {activeTab === "wallet" && (
+            <div className="space-y-6">
+              {/* Bank Info Card */}
+              <div className="bg-card border border-border p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-black text-lg text-foreground flex items-center gap-2">
+                    <Banknote className="text-blue-500" />
+                    Datos Bancarios para Retiros
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Configurá tu CVU, CBU o Alias adonde enviaremos tu plata.
+                  </p>
+                </div>
+                <div className="w-full md:w-1/2 flex items-center gap-2">
+                  <input 
+                    type="text"
+                    disabled={!isEditingBankInfo}
+                    value={bankInfo}
+                    onChange={(e) => setBankInfo(e.target.value)}
+                    placeholder="Ej: milanesa.papas.mp o 0000000000000000"
+                    className="flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-bold text-foreground disabled:opacity-70 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  />
+                  {isEditingBankInfo ? (
+                    <button
+                      onClick={async () => {
+                        setBankInfoLoading(true)
+                        try {
+                          const res = await fetch("/api/store-portal/wallet/bank-info", {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ bankInfo })
+                          })
+                          const data = await res.json()
+                          if (data.success) {
+                            toast.success("Datos bancarios guardados correctamente")
+                            setIsEditingBankInfo(false)
+                          } else {
+                            toast.error(data.error || "Error al guardar")
+                          }
+                        } catch (e) {
+                          toast.error("Error de conexión")
+                        } finally {
+                          setBankInfoLoading(false)
+                        }
+                      }}
+                      disabled={bankInfoLoading}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-colors disabled:opacity-50"
+                    >
+                      {bankInfoLoading ? <RefreshCw className="animate-spin" size={20} /> : "Guardar"}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setIsEditingBankInfo(true)}
+                      className="px-6 py-3 bg-[#F3F4F6] hover:bg-gray-200 text-[#1C1917] font-bold rounded-2xl transition-colors"
+                    >
+                      Editar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Debt and Balance Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Wallet Balance Hero Card */}
+                <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-8 rounded-3xl shadow-xl flex flex-col justify-between gap-6 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                    <Wallet size={120} />
+                  </div>
+                  <div className="z-10">
+                    <p className="text-blue-200 font-bold tracking-wider uppercase text-sm mb-2">Saldo Disponible</p>
+                    <h2 className="text-4xl md:text-5xl font-black mb-2">${storeWalletBalance.toLocaleString("es-AR")}</h2>
+                    <p className="text-blue-100 font-medium text-sm">
+                      Dinero a favor por pedidos con Wallet.
+                    </p>
+                  </div>
+                  <div className="z-10 mt-4">
+                    <button
+                      onClick={() => {
+                        if (storeWalletBalance <= 0) {
+                          toast.error("No tenés fondos suficientes para retirar.")
+                          return
+                        }
+                        setShowWithdrawModal(true)
+                      }}
+                      disabled={withdrawLoading || storeWalletBalance <= 0}
+                      className="w-full px-8 py-4 bg-white hover:bg-gray-50 text-blue-700 font-black rounded-2xl transition-transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      {withdrawLoading ? <RefreshCw className="animate-spin" size={20} /> : <Banknote size={20} />}
+                      Retirar Dinero
+                    </button>
+                  </div>
+                </div>
+
+                {/* Platform Debt Card */}
+                <div className="bg-gradient-to-br from-red-600 to-red-800 p-8 rounded-3xl shadow-xl flex flex-col justify-between gap-6 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                    <XCircle size={120} />
+                  </div>
+                  <div className="z-10">
+                    <p className="text-red-200 font-bold tracking-wider uppercase text-sm mb-2">Deuda con la plataforma</p>
+                    <h2 className="text-4xl md:text-5xl font-black mb-2">${platformDebt.toLocaleString("es-AR")}</h2>
+                    <p className="text-red-100 font-medium text-sm">
+                      Comisiones por cobros en efectivo (5%).
+                    </p>
+                  </div>
+                  <div className="z-10 mt-4">
+                    <button
+                      onClick={handlePayDebt}
+                      disabled={payDebtLoading || platformDebt <= 0 || storeWalletBalance < platformDebt}
+                      className="w-full px-8 py-4 bg-white hover:bg-gray-50 text-red-700 font-black rounded-2xl transition-transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      {payDebtLoading ? <RefreshCw className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
+                      Pagar Deuda con Saldo Wallet
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Wallet Historical Orders */}
+              <div>
+                <h3 className="font-black text-xl text-[#1C1917] mb-4 flex items-center gap-2">
+                  <Banknote className="text-blue-500" />
+                  Movimientos de la Billetera
+                </h3>
+                
+                {transactionsLoading ? (
+                  <div className="flex flex-col items-center justify-center p-12 bg-[#F9F5F0] rounded-3xl border border-dashed border-[#E5E7EB]">
+                    <RefreshCw size={32} className="text-muted-foreground/40 animate-spin" />
+                  </div>
+                ) : walletTransactions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 bg-[#F9F5F0] rounded-3xl border border-dashed border-[#E5E7EB]">
+                    <Wallet size={48} className="text-muted-foreground/40" />
+                    <p className="mt-4 font-bold text-muted-foreground text-sm">Aún no hay movimientos registrados</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {walletTransactions.map((tx) => (
+                      <div
+                        key={tx.id}
+                        className="rounded-2xl border border-[#F3F4F6] bg-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${tx.type === "payment_received" ? "bg-blue-50 text-blue-500 border-blue-100" : tx.type === "debt_payment" ? "bg-orange-50 text-orange-500 border-orange-100" : "bg-red-50 text-red-500 border-red-100"}`}>
+                            <ArrowLeft className={tx.type === "payment_received" ? "rotate-[-135deg]" : "rotate-[45deg]"} size={24} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-[#1C1917] text-sm">{tx.description || (tx.type === "payment_received" ? "Cobro de pedido" : tx.type === "debt_payment" ? "Pago de deuda" : "Retiro de fondos")}</h4>
+                            <p className="text-xs text-muted-foreground mt-0.5">Ref #{tx.id.slice(-6).toUpperCase()}</p>
+                            <span className="text-[10px] text-muted-foreground font-medium block mt-1">
+                              {formatDate(tx.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className={`font-black text-lg ${tx.type === "payment_received" ? "text-green-600" : "text-[#1C1917]"}`}>
+                            {tx.type === "payment_received" ? "+" : ""}${Math.abs(tx.amount).toLocaleString("es-AR")}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md mt-1 ${tx.type === "payment_received" ? "bg-green-50 text-green-600" : tx.type === "debt_payment" ? "bg-orange-50 text-orange-600" : tx.status === "pending" ? "bg-yellow-50 text-yellow-600" : tx.status === "rejected" ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-600"}`}>
+                            {tx.type === "payment_received" ? "Ingreso" : tx.type === "debt_payment" ? "Deuda Pagada" : tx.status === "pending" ? "Retiro Pendiente" : tx.status === "rejected" ? "Rechazado" : "Retiro Completado"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1375,6 +1633,60 @@ export default function StorePortalPage() {
                     </div>
                   )
                 })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal Confirmation Modal */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl overflow-hidden relative animate-in fade-in zoom-in duration-200">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4">
+                <Banknote size={32} />
+              </div>
+              <h2 className="text-2xl font-black text-[#1C1917] mb-2">Confirmar Retiro</h2>
+              <p className="text-muted-foreground font-medium mb-6">
+                ¿Estás seguro de que querés transferir <span className="font-bold text-[#1C1917]">${storeWalletBalance.toLocaleString("es-AR")}</span> a tu cuenta bancaria? 
+                Esta acción no se puede deshacer.
+              </p>
+              
+              <div className="flex w-full gap-3">
+                <button
+                  onClick={() => setShowWithdrawModal(false)}
+                  disabled={withdrawLoading}
+                  className="flex-1 py-3 bg-[#F3F4F6] hover:bg-gray-200 text-muted-foreground font-bold rounded-2xl transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    setWithdrawLoading(true)
+                    try {
+                      const res = await fetch("/api/store-portal/wallet/withdraw", { method: "POST" })
+                      const data = await res.json()
+                      if (data.success) {
+                        toast.success("¡Retiro exitoso! La plata llegará pronto a tu cuenta.")
+                        setStoreWalletBalance(0)
+                        setShowWithdrawModal(false)
+                        fetchTransactions()
+                      } else {
+                        toast.error(data.error || "Error al procesar el retiro")
+                      }
+                    } catch (e) {
+                      toast.error("Error de conexión")
+                    } finally {
+                      setWithdrawLoading(false)
+                    }
+                  }}
+                  disabled={withdrawLoading}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+                >
+                  {withdrawLoading ? <RefreshCw className="animate-spin" size={20} /> : <Check size={20} strokeWidth={3} />}
+                  Sí, Retirar
+                </button>
               </div>
             </div>
           </div>

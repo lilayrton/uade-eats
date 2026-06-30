@@ -32,12 +32,46 @@ export async function POST(req: Request) {
       const approvedPayment = searchResult.results?.find((p: any) => p.status === "approved")
 
       if (approvedPayment || process.env.NODE_ENV !== "production") {
-        const updatedOrder = await db.order.update({
-          where: { id: orderId },
-          data: { status: "pending" }
+        const processedOrder = await db.$transaction(async (tx) => {
+          // Intentar ser el primero en transicionar de pending_payment a pending
+          const result = await tx.order.updateMany({
+            where: { id: orderId, status: "pending_payment" },
+            data: { status: "pending" }
+          })
+          
+          if (result.count === 0) {
+            return null // Alguien más (el webhook o otra tab) ya lo procesó
+          }
+          
+          // Ahora leemos la orden tranquilos sabiendo que nosotros la transicionamos
+          const currentOrder = await tx.order.findUnique({ where: { id: orderId } })
+          if (!currentOrder) return null
+          
+          const actualServiceFee = currentOrder.serviceFee
+          const storeRevenue = currentOrder.total - currentOrder.serviceFee
+          
+          // Entregar el subtotal al store virtualmente
+          await tx.store.update({
+            where: { id: currentOrder.storeId },
+            data: { walletBalance: { increment: storeRevenue } }
+          })
+          
+          // Registrar comisión del 5% para la plataforma
+          await tx.platformTransaction.create({
+            data: {
+              amount: actualServiceFee,
+              type: "service_fee",
+              description: `Comisión MP (5%) - Pedido #${currentOrder.pickupCode || currentOrder.id.slice(-4)}`,
+              storeId: currentOrder.storeId
+            }
+          })
+
+          return currentOrder
         })
 
-        dispatchEvent("new_order", { orderId: updatedOrder.id, storeId: updatedOrder.storeId })
+        if (processedOrder) {
+          dispatchEvent("new_order", { orderId: processedOrder.id, storeId: processedOrder.storeId })
+        }
         return NextResponse.json({ success: true, status: "pending" })
       } else {
         return NextResponse.json({ success: false, error: "Payment not approved yet", status: "pending_payment" })

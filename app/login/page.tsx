@@ -41,8 +41,13 @@ export default function LoginPage() {
       }
 
       dispatch({ type: "LOGIN", payload: data.user })
+      localStorage.setItem("uade-eats-user", JSON.stringify(data.user))
+      document.cookie = "uade-eats-auth=1; path=/"
+      
       if (data.user.role === "store_owner") {
         window.location.replace("/store-portal")
+      } else if (data.user.role === "admin") {
+        window.location.replace("/admin")
       } else {
         window.location.replace("/")
       }

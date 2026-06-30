@@ -20,14 +20,14 @@ export async function GET() {
 
     const store = await db.store.findUnique({
       where: { id: user.storeId },
-      select: { isOpen: true }
+      select: { isOpen: true, walletBalance: true, platformDebt: true, bankInfo: true }
     })
 
     if (!store) {
       return NextResponse.json({ error: "Local no encontrado" }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true, isOpen: store.isOpen })
+    return NextResponse.json({ success: true, isOpen: store.isOpen, walletBalance: store.walletBalance, platformDebt: store.platformDebt, bankInfo: store.bankInfo })
   } catch (error) {
     console.error("Error fetching store status:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
