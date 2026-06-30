@@ -19,7 +19,8 @@ import {
   Image as ImageIcon,
   FolderOpen,
   Wallet,
-  Banknote
+  Banknote,
+  Plus
 } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/context/AppContext"
@@ -1671,7 +1672,7 @@ export default function StorePortalPage() {
                         toast.success("¡Retiro exitoso! La plata llegará pronto a tu cuenta.")
                         setStoreWalletBalance(0)
                         setShowWithdrawModal(false)
-                        fetchTransactions()
+                        fetchWalletTransactions()
                       } else {
                         toast.error(data.error || "Error al procesar el retiro")
                       }
