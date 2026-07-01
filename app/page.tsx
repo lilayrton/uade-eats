@@ -7,11 +7,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const storesData = await db.store.findMany({
-    orderBy: {
-      rating: 'desc'
-    },
     include: {
-      products: true
+      products: {
+        include: { category: true }
+      }
     }
   })
 
@@ -35,7 +34,7 @@ export default async function HomePage() {
       name: p.name,
       description: p.description,
       price: p.price,
-      category: p.category as any,
+      category: p.category?.name ?? "",
       imageUrl: p.imageUrl,
     }))
   )

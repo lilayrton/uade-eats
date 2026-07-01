@@ -57,22 +57,6 @@ export function StoreCard({ store, onClick }: StoreCardProps) {
           </div>
           <ChevronRight className="shrink-0 mt-0.5 text-muted-foreground" size={18} />
         </div>
-
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/60">
-          <div className="flex items-center gap-1">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="#F97316" className="shrink-0">
-              <path d="M7 1l1.545 3.09L12 4.635l-2.5 2.41.59 3.41L7 8.91l-3.09 1.545.59-3.41L2 4.635l3.455-.545L7 1z" />
-            </svg>
-            <span className="text-sm font-semibold text-foreground">
-              {store.rating.toFixed(1)}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Clock size={13} className="shrink-0" />
-            <span className="text-sm">{store.estimatedWaitMinutes} min</span>
-          </div>
-        </div>
       </div>
     </Link>
   )

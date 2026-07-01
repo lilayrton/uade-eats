@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { ArrowLeft, Star, Clock, ShoppingBag } from "lucide-react"
+import { ArrowLeft, ShoppingBag } from "lucide-react"
 import { ProductCard } from "@/components/product-card"
 import { CategoryTabs } from "@/components/category-tabs"
 import { BottomNav } from "@/components/bottom-nav"
@@ -134,18 +134,6 @@ export default function StorePageClient({ storeData, storeProducts }: StorePageC
             />
             {/* Gradient scrim */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-
-            {/* Meta chips over hero */}
-            <div className="absolute bottom-3 left-4 flex items-center gap-3">
-              <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1">
-                <Star size={11} fill="#F97316" stroke="none" />
-                <span className="text-white text-xs font-bold">{storeData.rating}</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1">
-                <Clock size={11} className="text-white/80" />
-                <span className="text-white text-xs font-semibold">{storeData.estimatedWaitMinutes} min</span>
-              </div>
-            </div>
           </div>
 
           {/* Warning Banner */}

@@ -37,9 +37,8 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
   const [search, setSearch] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [onlyOpen, setOnlyOpen] = useState(false)
-  const [sortBy, setSortBy] = useState<"relevance" | "wait" | "rating">("relevance")
 
-  const hasActiveFilters = onlyOpen || sortBy !== "relevance"
+  const hasActiveFilters = onlyOpen
 
   const filteredStores = useMemo(() => {
     const normalizedSearch = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
@@ -53,22 +52,16 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
       return matchFilter && matchSearch && matchOpen
     })
 
-    if (sortBy === "wait") {
-      result = [...result].sort((a, b) => a.estimatedWaitMinutes - b.estimatedWaitMinutes)
-    } else if (sortBy === "rating") {
-      result = [...result].sort((a, b) => b.rating - a.rating)
-    }
-
     return result
-  }, [activeFilter, search, onlyOpen, sortBy, stores])
+  }, [activeFilter, search, onlyOpen, stores])
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     if (normalizedSearch.trim() === "") return []
-    return allProducts.filter(p => 
-      p.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
-      p.description.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
-      p.category.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch)
+    return allProducts.filter(p =>
+      (p.name ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
+      (p.description ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
+      (p.category ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch)
     )
   }, [search, allProducts])
 
@@ -260,12 +253,9 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
         onFilterChange={setActiveFilter}
         onlyOpen={onlyOpen}
         onOnlyOpenChange={setOnlyOpen}
-        sortBy={sortBy}
-        onSortByChange={setSortBy}
         onReset={() => {
           setActiveFilter("all")
           setOnlyOpen(false)
-          setSortBy("relevance")
         }}
       />
     </div>

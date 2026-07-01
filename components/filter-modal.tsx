@@ -4,14 +4,9 @@ import { cn } from "@/lib/utils"
 
 const CATEGORIES = [
   { id: "all", label: "Todos" },
-  { id: "cafeteria", label: "Cafeterías" },
   { id: "pasteleria", label: "Pastelerías" },
   { id: "buffet", label: "Buffet" },
-  { id: "kiosco", label: "Kioscos" },
-  { id: "sandwicheria", label: "Sándwiches" },
 ]
-
-type SortBy = "relevance" | "wait" | "rating"
 
 interface FilterModalProps {
   open: boolean
@@ -20,8 +15,6 @@ interface FilterModalProps {
   onFilterChange: (id: string) => void
   onlyOpen: boolean
   onOnlyOpenChange: (v: boolean) => void
-  sortBy: SortBy
-  onSortByChange: (v: SortBy) => void
   onReset: () => void
 }
 
@@ -32,8 +25,6 @@ export function FilterModal({
   onFilterChange,
   onlyOpen,
   onOnlyOpenChange,
-  sortBy,
-  onSortByChange,
   onReset,
 }: FilterModalProps) {
   return (
@@ -109,41 +100,6 @@ export function FilterModal({
                   <button
                     key={label}
                     onClick={() => onOnlyOpenChange(value)}
-                    className={cn(
-                      "px-4 py-2 rounded-full text-sm font-semibold border transition-all duration-200 active:scale-95",
-                      isActive
-                        ? "text-white border-transparent"
-                        : "bg-card text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
-                    )}
-                    style={
-                      isActive
-                        ? { backgroundColor: "#F97316", borderColor: "#F97316" }
-                        : {}
-                    }
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Ordenar por section */}
-          <div className="px-4 mb-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Ordenar por
-            </p>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                { label: "Relevancia", value: "relevance" as SortBy },
-                { label: "Menor espera", value: "wait" as SortBy },
-                { label: "Mejor puntuación", value: "rating" as SortBy },
-              ].map(({ label, value }) => {
-                const isActive = sortBy === value
-                return (
-                  <button
-                    key={value}
-                    onClick={() => onSortByChange(value)}
                     className={cn(
                       "px-4 py-2 rounded-full text-sm font-semibold border transition-all duration-200 active:scale-95",
                       isActive
