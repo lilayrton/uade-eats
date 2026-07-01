@@ -4,11 +4,8 @@ import { cn } from "@/lib/utils"
 
 const FILTERS = [
   { id: "all", label: "Todos" },
-  { id: "cafeteria", label: "Cafeterías" },
   { id: "pasteleria", label: "Pastelerías" },
   { id: "buffet", label: "Buffet" },
-  { id: "kiosco", label: "Kioscos" },
-  { id: "sandwicheria", label: "Sándwiches" },
 ]
 
 interface FilterChipsProps {

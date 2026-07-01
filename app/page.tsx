@@ -7,9 +7,6 @@ export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const storesData = await db.store.findMany({
-    orderBy: {
-      rating: 'desc'
-    },
     include: {
       products: {
         include: { category: true }
