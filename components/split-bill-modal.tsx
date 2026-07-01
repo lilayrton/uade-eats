@@ -164,7 +164,8 @@ export function SplitBillModal({ open, total, orderId, onClose, existingSplit }:
         ) : (
           <>
             {/* Code display */}
-            <div className="text-center mb-4">
+            {!allPaid ? (
+              <div className="text-center mb-4">
               <p className="text-sm text-[#6B7280] mb-4">
                 Compartí este código con las otras personas para que paguen su parte desde su Wallet
               </p>
@@ -182,6 +183,7 @@ export function SplitBillModal({ open, total, orderId, onClose, existingSplit }:
                 </span>
               </button>
             </div>
+            ) : null}
 
             {/* Payment progress */}
             <div
