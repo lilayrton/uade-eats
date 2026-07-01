@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
@@ -12,21 +12,37 @@ interface WalletLoadModalProps {
 
 const AMOUNTS = [500, 1000, 2000, 5000]
 
+const CLOSE_ANIMATION_MS = 250
+
 export function WalletLoadModal({ open, onClose }: WalletLoadModalProps) {
   const router = useRouter()
   const [amount, setAmount] = useState("")
   const [customAmount, setCustomAmount] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [shouldRender, setShouldRender] = useState(open)
+  const [closing, setClosing] = useState(false)
 
-  if (!open) return null
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true)
+      setClosing(false)
+    }
+  }, [open])
+
+  if (!shouldRender) return null
 
   const selectedAmount = customAmount || amount
 
   function handleClose() {
-    if (isLoading) return
-    setAmount("")
-    setCustomAmount("")
-    onClose()
+    if (isLoading || closing) return
+    setClosing(true)
+    setTimeout(() => {
+      setAmount("")
+      setCustomAmount("")
+      setClosing(false)
+      setShouldRender(false)
+      onClose()
+    }, CLOSE_ANIMATION_MS)
   }
 
   async function handleLoad() {
@@ -76,10 +92,19 @@ export function WalletLoadModal({ open, onClose }: WalletLoadModalProps) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
+      <div
+        className={`fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity ${closing ? "opacity-0" : "opacity-100"}`}
+        style={{ transitionDuration: `${CLOSE_ANIMATION_MS}ms` }}
+        onClick={handleClose}
+      />
 
       <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
-        <div className="relative w-full max-w-[480px] bg-white rounded-t-3xl px-5 pt-5 pb-10 shadow-xl animate-in slide-in-from-bottom-4 duration-250 pointer-events-auto">
+        <div
+          className={`relative w-full max-w-[480px] bg-white rounded-t-3xl px-5 pt-5 pb-10 shadow-xl pointer-events-auto ${
+            closing ? "animate-out slide-out-to-bottom" : "animate-in slide-in-from-bottom-4"
+          }`}
+          style={{ animationDuration: `${CLOSE_ANIMATION_MS}ms` }}
+        >
 
           <div className="w-10 h-1 rounded-full bg-[#E5E7EB] mx-auto mb-5" />
 

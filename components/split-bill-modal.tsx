@@ -16,6 +16,8 @@ interface SplitBillModalProps {
   }
 }
 
+const CLOSE_ANIMATION_MS = 250
+
 export function SplitBillModal({ open, total, orderId, onClose, existingSplit }: SplitBillModalProps) {
   const [people, setPeople] = useState(2)
   const [code, setCode] = useState<string | null>(null)
@@ -24,6 +26,8 @@ export function SplitBillModal({ open, total, orderId, onClose, existingSplit }:
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [shouldRender, setShouldRender] = useState(open)
+  const [closing, setClosing] = useState(false)
 
   useEffect(() => {
     if (open && existingSplit) {
@@ -34,7 +38,14 @@ export function SplitBillModal({ open, total, orderId, onClose, existingSplit }:
     }
   }, [open, existingSplit])
 
-  if (!open) return null
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true)
+      setClosing(false)
+    }
+  }, [open])
+
+  if (!shouldRender) return null
 
   const previewPerPerson = (total / people).toFixed(2)
   const pendingCount = people - 1 - paidCount
@@ -73,23 +84,38 @@ export function SplitBillModal({ open, total, orderId, onClose, existingSplit }:
   }
 
   function handleClose() {
-    setCode(null)
-    setPerPerson(0)
-    setPeople(2)
-    setPaidCount(0)
-    setCopied(false)
-    setError(null)
-    onClose()
+    if (closing) return
+    setClosing(true)
+    setTimeout(() => {
+      setCode(null)
+      setPerPerson(0)
+      setPeople(2)
+      setPaidCount(0)
+      setCopied(false)
+      setError(null)
+      setClosing(false)
+      setShouldRender(false)
+      onClose()
+    }, CLOSE_ANIMATION_MS)
   }
 
   return (
     <>
       {/* Backdrop — full viewport */}
-      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
+      <div
+        className={`fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity ${closing ? "opacity-0" : "opacity-100"}`}
+        style={{ transitionDuration: `${CLOSE_ANIMATION_MS}ms` }}
+        onClick={handleClose}
+      />
 
       {/* Sheet — constrained to app width */}
       <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
-      <div className="relative w-full max-w-[480px] bg-white rounded-t-3xl px-5 pt-5 pb-10 shadow-xl animate-in slide-in-from-bottom-4 duration-250 pointer-events-auto">
+      <div
+        className={`relative w-full max-w-[480px] bg-white rounded-t-3xl px-5 pt-5 pb-10 shadow-xl pointer-events-auto ${
+          closing ? "animate-out slide-out-to-bottom" : "animate-in slide-in-from-bottom-4"
+        }`}
+        style={{ animationDuration: `${CLOSE_ANIMATION_MS}ms` }}
+      >
 
         {/* Handle */}
         <div className="w-10 h-1 rounded-full bg-[#E5E7EB] mx-auto mb-5" />
@@ -164,7 +190,8 @@ export function SplitBillModal({ open, total, orderId, onClose, existingSplit }:
         ) : (
           <>
             {/* Code display */}
-            <div className="text-center mb-4">
+            {!allPaid ? (
+              <div className="text-center mb-4">
               <p className="text-sm text-[#6B7280] mb-4">
                 Compartí este código con las otras personas para que paguen su parte desde su Wallet
               </p>
@@ -182,6 +209,7 @@ export function SplitBillModal({ open, total, orderId, onClose, existingSplit }:
                 </span>
               </button>
             </div>
+            ) : null}
 
             {/* Payment progress */}
             <div
