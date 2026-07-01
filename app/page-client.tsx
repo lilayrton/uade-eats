@@ -65,10 +65,10 @@ export default function HomePageClient({ stores, allProducts }: HomePageProps) {
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     if (normalizedSearch.trim() === "") return []
-    return allProducts.filter(p => 
-      p.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
-      p.description.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
-      p.category.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch)
+    return allProducts.filter(p =>
+      (p.name ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
+      (p.description ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch) ||
+      (p.category ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedSearch)
     )
   }, [search, allProducts])
 

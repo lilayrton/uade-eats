@@ -11,7 +11,9 @@ export default async function HomePage() {
       rating: 'desc'
     },
     include: {
-      products: true
+      products: {
+        include: { category: true }
+      }
     }
   })
 
@@ -35,7 +37,7 @@ export default async function HomePage() {
       name: p.name,
       description: p.description,
       price: p.price,
-      category: p.category as any,
+      category: p.category?.name ?? "",
       imageUrl: p.imageUrl,
     }))
   )
