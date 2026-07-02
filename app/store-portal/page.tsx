@@ -21,11 +21,30 @@ import {
   FolderOpen,
   Wallet,
   Banknote,
-  Plus
+  Plus,
+  User as UserIcon,
+  Pencil,
+  LogOut,
+  ChevronDown
 } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/context/AppContext"
 import type { Order, OrderStatus } from "@/lib/types"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 interface Category {
   id: string
@@ -53,7 +72,12 @@ interface StoreWalletTransaction {
 
 export default function StorePortalPage() {
   const router = useRouter()
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
+
+  // Account widget state
+  const [showAccountDialog, setShowAccountDialog] = useState(false)
+  const [editedName, setEditedName] = useState(state.user?.name ?? "")
+  const [nameLoading, setNameLoading] = useState(false)
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([])
@@ -120,6 +144,49 @@ export default function StorePortalPage() {
     fetchCategories()
     fetchStoreStatus()
   }, [fetchCategories, fetchStoreStatus])
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch (e) {
+      console.error(e)
+    }
+    dispatch({ type: "LOGOUT" })
+    router.push("/login")
+  }
+
+  const handleSaveName = async () => {
+    const newName = editedName.trim()
+    if (!newName) {
+      toast.error("El nombre no puede estar vacío")
+      return
+    }
+    if (newName === state.user?.name) {
+      setShowAccountDialog(false)
+      return
+    }
+    setNameLoading(true)
+    try {
+      const res = await fetch("/api/user", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName })
+      })
+      const data = await res.json()
+      if (data.success) {
+        dispatch({ type: "SET_USER", payload: data.user })
+        toast.success("Nombre actualizado ✓")
+        setShowAccountDialog(false)
+      } else {
+        toast.error(data.error || "Error al guardar")
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error("Error de conexión")
+    } finally {
+      setNameLoading(false)
+    }
+  }
 
   // allCategories is now just the customCategories directly from DB
   const allCategories = customCategories
@@ -428,21 +495,17 @@ export default function StorePortalPage() {
         <header className="bg-white border-b border-[#F3F4F6] sticky top-0 z-40 px-3 md:px-6 py-4 flex flex-col gap-4">
           <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push("/profile")}
-                aria-label="Salir al perfil"
-                className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#F9F5F0] hover:bg-[#F3F4F6] text-[#1C1917] transition-colors active:scale-95"
-              >
-                <ArrowLeft size={18} />
-              </button>
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#F9F5F0] text-[#1C1917]">
+                <ShoppingBag size={18} />
+              </div>
               <div>
                 <h1 className="text-xl font-black text-[#1C1917]">Portal de Administración</h1>
                 <p className="text-xs text-muted-foreground font-semibold mt-0.5">{state.user?.name || ""}</p>
               </div>
             </div>
 
-            <div className="hidden md:flex items-center gap-2 shrink-0">
-              <span className="text-xs font-semibold px-2 py-1 bg-green-50 text-green-700 rounded-full border border-green-200 flex items-center gap-1">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="hidden md:flex text-xs font-semibold px-2 py-1 bg-green-50 text-green-700 rounded-full border border-green-200 items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
                 Monitoreo en tiempo real
               </span>
@@ -455,6 +518,41 @@ export default function StorePortalPage() {
                   <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
                 </button>
               )}
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    aria-label="Cuenta"
+                    className="flex items-center gap-1.5 h-10 pl-1.5 pr-2.5 rounded-2xl bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#1C1917] transition-colors active:scale-95"
+                  >
+                    <span className="w-7 h-7 rounded-xl flex items-center justify-center bg-[#F97316]/10 text-[#F97316] shrink-0">
+                      <UserIcon size={14} />
+                    </span>
+                    <span className="hidden sm:block text-xs font-bold max-w-[100px] truncate">
+                      {state.user?.name || "Cuenta"}
+                    </span>
+                    <ChevronDown size={14} className="text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-black">{state.user?.name}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditedName(state.user?.name ?? "")
+                      setShowAccountDialog(true)
+                    }}
+                  >
+                    <Pencil />
+                    Editar nombre
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                    <LogOut />
+                    Cerrar sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -1694,6 +1792,31 @@ export default function StorePortalPage() {
           </div>
         </div>
       )}
+
+      <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Editar nombre</DialogTitle>
+          </DialogHeader>
+          <input
+            type="text"
+            value={editedName}
+            onChange={(e) => setEditedName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-border bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#F97316]/40"
+            placeholder="Nombre completo"
+          />
+          <DialogFooter>
+            <button
+              onClick={handleSaveName}
+              disabled={nameLoading}
+              className="w-full py-3 rounded-xl font-semibold text-white text-sm disabled:opacity-50"
+              style={{ backgroundColor: "#F97316" }}
+            >
+              {nameLoading ? "Guardando..." : "Guardar cambios"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
