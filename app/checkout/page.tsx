@@ -9,12 +9,14 @@ import {
   Lock,
   Loader2,
   Wallet,
+  Banknote,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
+import Image from "next/image"
 
-type PaymentId = "mercadopago" | "tarjeta" | "wallet"
+type PaymentId = "mercadopago" | "efectivo" | "tarjeta" | "wallet"
 
 interface PaymentMethod {
   id: PaymentId
@@ -26,6 +28,7 @@ interface PaymentMethod {
 
 const PAYMENT_METHODS: PaymentMethod[] = [
   { id: "mercadopago", label: "MercadoPago",         sublabel: "Pago digital" },
+  { id: "efectivo",    label: "Efectivo al retirar",  sublabel: "Pagás cuando retirás" },
   { id: "tarjeta",     label: "Tarjeta de crédito",   sublabel: "",              disabled: true, comingSoon: true },
 ]
 
@@ -640,13 +643,25 @@ function PaymentMethodIcon({ id }: { id: PaymentId }) {
 
   if (id === "mercadopago") {
     return (
+      <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0">
+        <Image
+          src="/mp-logo.jpg"
+          width={44}
+          height={44}
+          alt="MercadoPago"
+          className="w-full h-full object-contain"
+        />
+      </div>
+    )
+  }
+
+  if (id === "efectivo") {
+    return (
       <div
-        className="w-11 h-8 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-white text-xs tracking-wide"
-        style={{
-          background: "linear-gradient(135deg, #009FE3 0%, #00B1EA 100%)",
-        }}
+        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: "#F0FDF4" }}
       >
-        MP
+        <Banknote size={22} color="#16A34A" />
       </div>
     )
   }
