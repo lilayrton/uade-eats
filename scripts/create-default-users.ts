@@ -15,6 +15,15 @@ async function main() {
     throw new Error("No se encontró 'La Cantina' en la base de datos. Asegúrate de correr seed.ts primero.")
   }
 
+  // 2. Obtener la tienda "Rústica Pastelería"
+  const rustica = await db.store.findFirst({
+    where: { name: "Rústica Pastelería" }
+  })
+
+  if (!rustica) {
+    throw new Error("No se encontró 'Rústica Pastelería' en la base de datos.")
+  }
+
   const passwordHash = await bcrypt.hash("Password123!", 10)
 
   const defaultUsers = [
@@ -41,6 +50,12 @@ async function main() {
       email: "ayrtonkevin01@hotmail.com",
       role: "store_owner",
       storeId: cantina.id
+    },
+    {
+      name: "Administración Rústica",
+      email: "adminrustica@uade.edu.ar",
+      role: "store_owner",
+      storeId: rustica.id
     },
     {
       name: "Dario Lencina",

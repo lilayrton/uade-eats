@@ -1,0 +1,60 @@
+UADE EATS - GUÍA DE PRUEBA PARA PROFESORES
+===========================================
+
+Bienvenido a UADE Eats. A continuación, se detallan las cuentas y flujos principales de la aplicación para que puedan probarla en su totalidad.
+
+1. CUENTAS DE ACCESO
+--------------------
+La aplicación cuenta con distintos roles (Estudiante/Cliente, Dueño de Local, Superadmin). Pueden utilizar las siguientes credenciales para iniciar sesión:
+
+► Cuenta Superadmin (Panel de Control Global)
+- Correo: admin@uade.edu.ar
+- Contraseña: password123
+- Ruta de acceso: /admin (O desde el menú principal si inicia sesión en el Home).
+- Funciones: Ver métricas globales, retirar fondos a las cuentas bancarias de los locales, estado de deuda.
+
+► Cuenta Dueño de Local - RÚSTICA PASTELERÍA
+- Correo: adminrustica@uade.edu.ar
+- Contraseña: Password123!
+- Ruta de acceso: /store-portal (Portal de Locales).
+- Funciones: Activar/Desactivar local (Abrir/Cerrar), gestionar billetera y retirar ganancias, gestionar órdenes entrantes, agregar/editar productos.
+
+► Cuenta Dueño de Local - LA CANTINA
+- Correo: ayrtonkevin01@hotmail.com
+- Contraseña: Password123!
+
+► Cuenta Cliente / Alumno (Para probar el flujo de compra)
+- Correo: test4@uade.edu.ar  (O cualquiera de los creados en la DB)
+- Contraseña: Password123!
+- *Nota: También pueden registrarse libremente creando una nueva cuenta.*
+
+2. FLUJOS PRINCIPALES PARA PROBAR
+---------------------------------
+
+A) Flujo de Compra (Cliente):
+1. Iniciar sesión como alumno.
+2. Ingresar a "Rústica Pastelería" o "La Cantina".
+3. Agregar productos al carrito.
+4. Proceder al pago (Checkout). Puede probar la integración de MercadoPago.
+5. Ver el estado del pedido en la sección "Mis Pedidos".
+
+B) Flujo de Gestión (Dueño de Local):
+1. Iniciar sesión con la cuenta de Rústica Pastelería.
+2. Ingresar al Portal del Local (/store-portal).
+3. Ir a "Órdenes" para aceptar el pedido realizado por el alumno y cambiar su estado (Preparando -> Listo para retirar).
+4. Ir a "Billetera" para ver el dinero acreditado menos la comisión de la plataforma. Solicitar un retiro de dinero.
+5. En la sección "Menú", editar precios o deshabilitar/habilitar productos.
+6. Cambiar el estado del local de "Abierto" a "Cerrado".
+
+C) Flujo Administrativo (Superadmin):
+1. Iniciar sesión con la cuenta Superadmin.
+2. Ir a la ruta "/admin" (Panel Superadmin).
+3. Ver las métricas históricas de ganancia (Fee de servicio).
+4. Ver los retiros pendientes solicitados por los dueños de locales y aprobarlos.
+5. Monitorear las deudas pendientes de los locales.
+
+3. NOTAS IMPORTANTES
+--------------------
+- La plataforma cobra un porcentaje de comisión ("Service Fee") automáticamente en cada venta.
+- Si MercadoPago no se completa, el pago queda "Pendiente". En entornos locales, MercadoPago permite usar tarjetas de prueba para simular compras aprobadas.
+- Base de datos en tiempo real: Si tienen dos ventanas abiertas (ej: la vista del local y la del cliente), verán cómo los estados de las órdenes se actualizan en tiempo real o al refrescar.

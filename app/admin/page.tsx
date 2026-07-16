@@ -67,11 +67,13 @@ export default function AdminDashboardPage() {
 
     if (state.user?.role === "admin") {
       fetchData()
+      const intervalId = setInterval(() => fetchData(true), 2000)
+      return () => clearInterval(intervalId)
     }
   }, [state.user, router])
 
-  const fetchData = async () => {
-    setLoading(true)
+  const fetchData = async (isPolling = false) => {
+    if (!isPolling) setLoading(true)
     try {
       const res = await fetch("/api/admin/metrics")
       const data = await res.json()
@@ -81,13 +83,13 @@ export default function AdminDashboardPage() {
         setTransactions(data.transactions)
         setPendingWithdrawals(data.pendingWithdrawals || [])
       } else {
-        toast.error(data.error || "Error al cargar métricas")
+        if (!isPolling) toast.error(data.error || "Error al cargar métricas")
       }
     } catch (e) {
       console.error(e)
-      toast.error("Error de conexión")
+      if (!isPolling) toast.error("Error de conexión")
     } finally {
-      setLoading(false)
+      if (!isPolling) setLoading(false)
     }
   }
 
